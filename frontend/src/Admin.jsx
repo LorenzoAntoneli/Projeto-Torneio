@@ -53,6 +53,32 @@ export default function Admin() {
 
   const logout = () => { localStorage.removeItem('bt_session'); setSession(null); };
 
+  const createTournament = async () => {
+    if (!newTName) return;
+    await supabase.from('tournaments').insert([{ name: newTName, max_pairs: newTMax }]);
+    setNewTName(''); setNewTMax(0); loadData(); setActiveTab('setup');
+  };
+
+  const createCategory = async () => {
+    if (!selectedT || !newCName) return;
+    await supabase.from('categories').insert([{ tournament_id: selectedT, name: newCName }]);
+    setNewCName(''); const { data } = await supabase.from('categories').select('*').eq('tournament_id', selectedT);
+    setCategories(data || []);
+  };
+
+  const createPair = async () => {
+    if (!selectedC || !newPairName) return;
+    await supabase.from('pairs').insert([{ category_id: selectedC, name: newPairName }]);
+    setNewPairName(''); const { data } = await supabase.from('pairs').select('*').eq('category_id', selectedC);
+    setPairs(data || []);
+  };
+
+  const createMatch = async () => {
+    if (!selectedC || !matchP1 || !matchP2 || matchP1 === matchP2) return alert('Selecione duplas diferentes');
+    await supabase.from('matches').insert([{ category_id: selectedC, pair1_id: matchP1, pair2_id: matchP2 }]);
+    setMatchP1(''); setMatchP2(''); loadData(); setActiveTab('scoreboard');
+  };
+
   const startMatch = async (id) => {
     await supabase.from('matches').update({ status: 'in_progress', updated_at: new Date() }).eq('id', id);
     loadData();
@@ -81,14 +107,33 @@ export default function Admin() {
     loadData();
   };
 
+  const handleImport = (e) => {
+    e.preventDefault(); if (!importFile) return; setIsImporting(true);
+    Papa.parse(importFile, { header: true, skipEmptyLines: true, complete: async (results) => {
+        try {
+          const tCache = {}; const cCache = {};
+          for (const row of results.data) {
+            const tN = row.Tournament || row.torneio || 'Torneio';
+            const cN = row.Category || row.categoria || 'Geral';
+            const pN = row.PairName || row.dupla || 'Anonimo';
+            if (!tCache[tN]) { let { data: t } = await supabase.from('tournaments').select('id').eq('name', tN).single(); if (!t) { const { data: nT } = await supabase.from('tournaments').insert([{ name: tN }]).select('id').single(); t = nT; } tCache[tN] = t.id; }
+            const cKey = `${tCache[tN]}_${cN}`; if (!cCache[cKey]) { let { data: c } = await supabase.from('categories').select('id').eq('name', cN).eq('tournament_id', tCache[tN]).single(); if (!c) { const { data: nC } = await supabase.from('categories').insert([{ name: cN, tournament_id: tCache[tN] }]).select('id').single(); c = nC; } cCache[cKey] = c.id; }
+            await supabase.from('pairs').insert([{ name: pN, category_id: cCache[cKey] }]);
+          }
+          alert('Importado!'); loadData(); setActiveTab('scoreboard');
+        } catch (err) { alert('Erro: ' + err.message); } finally { setIsImporting(false); setImportFile(null); }
+      }
+    });
+  };
+
   if (!session) return (
-    <div className="admin-login-screen">
-      <div className="glass-panel login-card">
-        <Trophy size={60} color="var(--accent-primary)" />
-        <h2>Careca’s Admin</h2>
+    <div style={{height: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center'}}>
+      <div className="glass-panel" style={{padding: '50px', borderRadius: '32px', width: '400px', textAlign: 'center', border: '2px solid var(--accent-primary)'}}>
+        <Trophy size={60} color="var(--accent-primary)" style={{marginBottom: 20}} />
+        <h2 style={{fontSize: '1.6rem', marginBottom: 30, textTransform: 'uppercase', letterSpacing: 2}}>Careca’s Admin</h2>
         <form onSubmit={login}>
-          <input type="password" placeholder="Senha" value={password} onChange={e => setPassword(e.target.value)} />
-          <button type="submit" className="btn-primary">Acessar Painel</button>
+          <input type="password" placeholder="Senha" value={password} onChange={e => setPassword(e.target.value)} style={{width: '100%', marginBottom: 20, textAlign: 'center', background: '#111', border: '1px solid #333', color: '#fff', padding: '10px'}} />
+          <button type="submit" className="btn-primary" style={{width: '100%', padding: '12px', borderRadius: '8px', cursor: 'pointer'}}>Entrar</button>
         </form>
       </div>
     </div>
@@ -108,11 +153,11 @@ export default function Admin() {
           <div className={`nav-link ${activeTab === 'import' ? 'active' : ''}`} onClick={() => setActiveTab('import')}>
             <FileUp size={20} /> 2. Importar
           </div>
-          <div className="nav-spacer"></div>
-          <a href="/tv" target="_blank" className="nav-link tv-link">
+          <div style={{flex: 1}}></div>
+          <a href="/tv" target="_blank" className="nav-link tv-link" style={{textDecoration: 'none'}}>
             <Monitor size={20} /> Ver na TV
           </a>
-          <div className="nav-link logout-btn" onClick={logout}>
+          <div className="nav-link logout-btn" onClick={logout} style={{color: 'var(--accent-danger)'}}>
             <LogOut size={20} /> Sair
           </div>
         </nav>
@@ -123,11 +168,12 @@ export default function Admin() {
           <div className="admin-view-container">
             <h2 className="view-title">Partidas Ativas</h2>
             <div className="matches-list">
+              {matches.length === 0 && <p style={{color: '#666'}}>Nenhuma partida cadastrada.</p>}
               {matches.map(m => (
                 <div key={m.id} className="glass-panel match-ctrl-card">
                   <div className="card-header">
                     <span className="cat-badge">{m.category_name}</span>
-                    <span className={`status-text ${m.status}`}>{m.status.toUpperCase()}</span>
+                    <span style={{color: m.status === 'in_progress' ? 'var(--accent-primary)' : '#666'}}>{m.status.toUpperCase()}</span>
                   </div>
                   
                   <div className="match-teams-grid">
@@ -161,15 +207,86 @@ export default function Admin() {
                   </div>
                   
                   {m.status === 'pending' && (
-                    <button className="btn-primary start-btn" onClick={() => startMatch(m.id)}>Iniciar Partida</button>
+                    <button className="btn-primary" style={{width: '100%', marginTop: 20}} onClick={() => startMatch(m.id)}>Iniciar Partida</button>
                   )}
                 </div>
               ))}
             </div>
           </div>
         )}
-        
-        {/* Outras abas (Setup e Import) aqui também com a mesma estrutura limpa */}
+
+        {activeTab === 'setup' && (
+          <div className="admin-view-container" style={{maxWidth: '700px'}}>
+            <h2 className="view-title">1. Configurar Torneio</h2>
+            
+            <div className="glass-panel" style={{padding: 30, borderRadius: 20, marginBottom: 30}}>
+              <h3>Criar Novo Torneio</h3>
+              <input style={{width: '100%', margin: '15px 0'}} value={newTName} onChange={e => setNewTName(e.target.value)} placeholder="Nome do Torneio" className="admin-input" />
+              <button onClick={createTournament} className="btn-primary" style={{width: '100%'}}>Criar Torneio</button>
+            </div>
+
+            {tournaments.length > 0 && (
+              <div className="glass-panel" style={{padding: 30, borderRadius: 20}}>
+                <h3>Adicionar Categoria e Duplas</h3>
+                <select style={{width: '100%', margin: '15px 0'}} value={selectedT} onChange={e => setSelectedT(e.target.value)}>
+                   <option value="">Selecione o Torneio</option>
+                   {tournaments.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                </select>
+
+                {selectedT && (
+                  <div style={{marginTop: 20}}>
+                    <div style={{display: 'flex', gap: 10, marginBottom: 20}}>
+                      <input style={{flex: 1}} placeholder="Nome da Categoria" value={newCName} onChange={e => setNewCName(e.target.value)} />
+                      <button onClick={createCategory} className="btn-primary">Adicionar</button>
+                    </div>
+
+                    <hr style={{borderColor: 'var(--glass-border)', margin: '20px 0'}} />
+
+                    <div style={{display: 'flex', gap: 10}}>
+                       <input style={{flex: 1}} placeholder="Nova Dupla" value={newPairName} onChange={e => setNewPairName(e.target.value)} />
+                       <select style={{flex: 1}} value={selectedC} onChange={e => setSelectedC(e.target.value)}>
+                          <option value="">Categoria...</option>
+                          {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                       </select>
+                       <button onClick={createPair} className="btn-primary">Registrar</button>
+                    </div>
+
+                    <hr style={{borderColor: 'var(--glass-border)', margin: '20px 0'}} />
+                    
+                    <div style={{background: 'rgba(212, 175, 55, 0.05)', padding: 20, borderRadius: 12}}>
+                      <h4>Agendar Partida</h4>
+                      <div style={{display: 'flex', gap: 10, marginTop: 10}}>
+                         <select style={{flex: 1}} value={matchP1} onChange={e => setMatchP1(e.target.value)}>
+                            <option value="">Dupla 1</option>
+                            {pairs.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                         </select>
+                         <select style={{flex: 1}} value={matchP2} onChange={e => setMatchP2(e.target.value)}>
+                            <option value="">Dupla 2</option>
+                            {pairs.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                         </select>
+                         <button onClick={createMatch} className="btn-primary">Criar Jogo</button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {activeTab === 'import' && (
+          <div className="admin-view-container" style={{maxWidth: '600px'}}>
+             <h2 className="view-title">2. Importar LetzPlay</h2>
+             <div className="glass-panel" style={{padding: 40, borderRadius: 32, textAlign: 'center'}}>
+                <FileUp size={48} color="var(--accent-primary)" style={{marginBottom: 20}} />
+                <p style={{color: 'var(--text-secondary)', marginBottom: 30}}>Selecione o arquivo CSV do Careca’s Beach Club</p>
+                <input type="file" accept=".csv" onChange={e => setImportFile(e.target.files[0])} style={{marginBottom: 20, width: '100%'}} />
+                <button onClick={handleImport} className="btn-primary" style={{width: '100%', height: 50}} disabled={!importFile || isImporting}>
+                  {isImporting ? 'Processando...' : 'Iniciar Importação'}
+                </button>
+             </div>
+          </div>
+        )}
       </main>
     </div>
   );
