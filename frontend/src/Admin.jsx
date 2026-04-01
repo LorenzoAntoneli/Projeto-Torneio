@@ -131,15 +131,18 @@ export default function Admin() {
           <div>
             <h1 className="section-title">Em Quadra</h1>
             {matches.filter(m => m.status !== 'finished').map(m => (
-              <div key={m.id} className="app-card" style={{ borderLeftColor: 'var(--accent-primary)', position: 'relative' }}>
-                <button 
-                  onClick={() => deleteMatch(m.id)} 
-                  style={{ position: 'absolute', top: 15, right: 15, background: 'none', border: 'none', color: '#ff4d4d', cursor: 'pointer', opacity: 0.6 }}
-                >
-                  <Trash2 size={18} />
-                </button>
+              <div key={m.id} className="app-card" style={{ borderLeftColor: 'var(--accent-primary)', paddingTop: 10 }}>
+                {/* Barra de Topo do Card (Ações) */}
+                <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '0 5px 10px 0' }}>
+                  <button 
+                    onClick={() => deleteMatch(m.id)} 
+                    style={{ background: 'rgba(255,77,77,0.1)', border: 'none', color: '#ff4d4d', cursor: 'pointer', padding: '8px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                  >
+                    <Trash2 size={18} />
+                  </button>
+                </div>
 
-                <div style={{ textAlign: 'center', marginBottom: 20, display: 'flex', gap: 10, justifyContent: 'center' }}>
+                <div style={{ textAlign: 'center', marginBottom: 20, display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
                   <span className="cat-badge">{m.category?.name || 'Geral'}</span>
                   {m.court && <span className="cat-badge" style={{ background: 'rgba(255,255,255,0.05)', color: '#fff' }}>{m.court.name}</span>}
                   {m.scheduled_time && <span className="cat-badge" style={{ background: 'rgba(255,255,255,0.05)', color: '#fff' }}>{m.scheduled_time}</span>}
