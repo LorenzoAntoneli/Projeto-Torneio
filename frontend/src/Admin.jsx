@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from './supabase';
 import Papa from 'papaparse';
 import { v4 as uuidv4 } from 'uuid';
-import { Trophy, Trash2, Play, Swords, LayoutList, Users, LogOut, FileUp } from 'lucide-react';
+import { Trophy, Trash2, Play, Swords, LayoutList, Users, LogOut, FileUp, Monitor } from 'lucide-react';
 
 export default function Admin() {
   const [session, setSession] = useState(localStorage.getItem('bt_session'));
@@ -269,6 +269,7 @@ export default function Admin() {
         <div className={`admin-nav-item ${activeTab === 'pairs' ? 'active' : ''}`} onClick={() => setActiveTab('pairs')}><Users size={20} /> 3. Duplas</div>
         <div className={`admin-nav-item ${activeTab === 'matches' ? 'active' : ''}`} onClick={() => setActiveTab('matches')}><Play size={20} /> 4. Criar Partida</div>
         <div className={`admin-nav-item ${activeTab === 'import' ? 'active' : ''}`} onClick={() => setActiveTab('import')}><FileUp size={20} /> 5. Importar LetzPlay</div>
+        <a href="/tv" target="_blank" rel="noopener noreferrer" className="admin-nav-item" style={{textDecoration: 'none', color: 'var(--text-primary)'}}><Monitor size={20} /> Ver Tela da TV</a>
         <div style={{flex: 1}}></div>
         <div className="admin-nav-item" onClick={logout} style={{color: 'var(--text-danger)'}}><LogOut size={20} /> Sair</div>
       </div>
