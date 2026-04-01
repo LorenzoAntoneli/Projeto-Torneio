@@ -1,19 +1,18 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
 
 :root {
-  --bg-main: #020617;
-  --glass-bg: rgba(15, 23, 42, 0.7);
-  --glass-border: rgba(255, 255, 255, 0.1);
-  --accent-primary: #38bdf8;
-  --accent-secondary: #06b6d4;
+  --bg-main: #000000;
+  --panel-bg: #0c0a09;
+  --glass-bg: rgba(12, 10, 9, 0.85);
+  --glass-border: rgba(212, 175, 55, 0.2);
+  --accent-primary: #d4af37; /* Dourado Logo */
+  --accent-secondary: #fde047; /* Dourado Brilho */
   --accent-success: #22c55e;
   --accent-danger: #ef4444;
-  --accent-warning: #f59e0b;
-  --text-primary: #f8fafc;
-  --text-secondary: #94a3b8;
-  --neon-shadow: 0 0 20px rgba(56, 189, 248, 0.3);
-  --success-glow: 0 0 15px rgba(34, 197, 94, 0.4);
-  font-family: 'Inter', -apple-system, sans-serif;
+  --text-primary: #ffffff;
+  --text-secondary: #a8a29e;
+  --gold-shadow: 0 0 20px rgba(212, 175, 55, 0.2);
+  font-family: 'Inter', sans-serif;
 }
 
 * {
@@ -24,145 +23,111 @@
 }
 
 body {
-  background: radial-gradient(circle at top left, #0f172a, #020617);
+  background: radial-gradient(circle at top right, #1c1917, #000000);
   color: var(--text-primary);
   min-height: 100vh;
-  overflow-x: hidden;
 }
 
 .glass-panel {
   background: var(--glass-bg);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   border: 1px solid var(--glass-border);
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
 }
 
+/* --- TV DISPLAY CARECA'S --- */
 .tv-container {
-  padding: 40px;
+  padding: 50px;
   min-height: 100vh;
-  display: flex;
-  flex-direction: column;
 }
 
 .tv-header {
-  margin-bottom: 50px;
+  margin-bottom: 60px;
   text-align: center;
 }
 
 .tv-header h1 {
-  font-size: 4rem;
+  font-size: 5rem;
   font-weight: 900;
-  background: linear-gradient(to right, #fff, #38bdf8);
+  text-transform: uppercase;
+  background: linear-gradient(to bottom, #fde047, #d4af37, #ca8a04);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
-  letter-spacing: -2px;
-  text-transform: uppercase;
+  letter-spacing: -3px;
 }
 
 .tv-header p {
-  color: var(--accent-primary);
-  letter-spacing: 6px;
+  color: #fff;
+  letter-spacing: 12px;
   text-transform: uppercase;
-  font-weight: 600;
+  font-weight: 400;
+  margin-top: -10px;
+  opacity: 0.8;
 }
 
 .tv-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(600px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(650px, 1fr));
   gap: 30px;
 }
 
 .tv-match-card {
-  border-radius: 24px;
-  padding: 40px;
+  border-radius: 28px;
+  padding: 45px;
   position: relative;
-  transition: transform 0.3s ease;
-  overflow: hidden;
-}
-
-.tv-match-card::before {
-  content: '';
-  position: absolute;
-  top: 0; left: 0; width: 6px; height: 100%;
-  background: linear-gradient(to bottom, var(--accent-primary), var(--accent-secondary));
-}
-
-.tv-match-card.finished::before {
-  background: var(--accent-success);
+  border-left: 8px solid var(--accent-primary);
 }
 
 .tv-match-category {
   position: absolute;
-  top: 20px; right: 20px;
-  background: rgba(56, 189, 248, 0.1);
+  top: 25px; right: 25px;
+  background: rgba(212, 175, 55, 0.1);
   color: var(--accent-primary);
-  padding: 6px 16px;
-  border-radius: 99px;
+  padding: 8px 20px;
+  border-radius: 8px;
   font-weight: 800;
   text-transform: uppercase;
-  font-size: 0.8rem;
-  border: 1px solid rgba(56, 189, 248, 0.2);
-}
-
-.tv-teams-container {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-top: 20px;
-}
-
-.tv-team-block {
-  flex: 1;
-  text-align: center;
+  font-size: 0.9rem;
+  border: 1px solid var(--glass-border);
 }
 
 .tv-player-name {
-  font-size: 2.2rem;
-  font-weight: 800;
-  margin-bottom: 25px;
+  font-size: 2.6rem;
+  font-weight: 900;
   color: #fff;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.tv-scores {
-  display: flex;
-  justify-content: center;
-  gap: 15px;
 }
 
 .score-item {
-  background: rgba(0, 0, 0, 0.3);
-  padding: 15px;
-  border-radius: 16px;
-  min-width: 80px;
+  background: #000;
+  padding: 18px;
+  border-radius: 12px;
+  min-width: 90px;
   border: 1px solid var(--glass-border);
 }
 
 .score-label {
-  font-size: 0.7rem;
+  font-size: 0.75rem;
   color: var(--text-secondary);
   text-transform: uppercase;
-  margin-bottom: 8px;
+  margin-bottom: 5px;
   display: block;
 }
 
 .score-val {
-  font-size: 2.5rem;
+  font-size: 3rem;
   font-weight: 900;
-  font-family: 'Monaco', monospace;
+  font-family: 'Inter', sans-serif;
 }
 
 .score-val.points {
   color: var(--accent-primary);
-  text-shadow: var(--neon-shadow);
+  text-shadow: 0 0 15px rgba(212, 175, 55, 0.5);
 }
 
 .tv-vs-circle {
-  width: 60px;
-  height: 60px;
+  width: 70px;
+  height: 70px;
   border-radius: 50%;
   background: var(--glass-border);
   display: flex;
@@ -170,148 +135,48 @@ body {
   justify-content: center;
   font-weight: 900;
   color: var(--text-secondary);
-  margin: 0 20px;
-  font-size: 1.2rem;
+  font-size: 1.4rem;
 }
 
-.admin-layout {
-  display: flex;
-  height: 100vh;
-}
-
+/* --- ADMIN CARECA'S --- */
 .admin-sidebar {
-  width: 280px;
-  padding: 30px 20px;
+  width: 300px;
+  background: #000;
   border-right: 1px solid var(--glass-border);
-  display: flex;
-  flex-direction: column;
 }
 
 .admin-sidebar h1 {
-  font-size: 1.4rem;
-  margin-bottom: 40px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
   color: var(--accent-primary);
-}
-
-.nav-link {
-  padding: 14px 18px;
-  border-radius: 12px;
-  margin-bottom: 8px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  color: var(--text-secondary);
-  text-decoration: none;
-  font-weight: 600;
-  transition: all 0.2s;
-  cursor: pointer;
-}
-
-.nav-link:hover {
-  background: rgba(255, 255, 255, 0.05);
-  color: #fff;
+  padding: 20px;
+  text-transform: uppercase;
+  font-size: 1.1rem;
+  letter-spacing: 2px;
 }
 
 .nav-link.active {
-  background: linear-gradient(135deg, rgba(56, 189, 248, 0.2), rgba(56, 189, 248, 0.05));
+  background: linear-gradient(to right, rgba(212, 175, 55, 0.15), transparent);
   color: var(--accent-primary);
-  border: 1px solid rgba(56, 189, 248, 0.2);
-}
-
-.admin-main {
-  flex: 1;
-  padding: 40px;
-  overflow-y: auto;
-}
-
-.admin-card {
-  padding: 30px;
-  border-radius: 24px;
-  margin-bottom: 30px;
+  border-left: 4px solid var(--accent-primary);
 }
 
 button.btn-primary {
-  background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
-  color: #fff;
-  padding: 14px 28px;
-  border-radius: 12px;
-  font-weight: 700;
-  border: none;
-  cursor: pointer;
-  box-shadow: var(--neon-shadow);
-  transition: transform 0.2s;
+  background: linear-gradient(135deg, #d4af37, #ca8a04);
+  color: #000;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 1px;
 }
 
-button.btn-primary:hover {
-  transform: translateY(-2px);
-  filter: brightness(1.1);
-}
-
-input, select {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid var(--glass-border);
-  padding: 12px 18px;
-  border-radius: 10px;
-  color: #fff;
-  font-size: 1rem;
-  outline: none;
-  transition: border-color 0.2s;
-}
-
-input:focus {
-  border-color: var(--accent-primary);
-}
-
+/* --- RESPONSIVIDADE --- */
 @media (max-width: 768px) {
-  .admin-layout { flex-direction: column; }
-  .admin-sidebar {
-    width: 100%;
-    flex-direction: row;
-    overflow-x: auto;
-    padding: 15px;
-    height: auto;
-    position: sticky;
-    top: 0;
-    z-index: 100;
-  }
-  .admin-sidebar h1 { display: none; }
-  .nav-link { 
-    margin-bottom: 0; 
-    margin-right: 10px; 
-    padding: 10px 15px;
-    flex-direction: column;
-    font-size: 0.7rem;
-    min-width: 80px;
-    text-align: center;
-  }
-  .tv-grid { grid-template-columns: 1fr; }
-  .tv-match-card { padding: 25px; }
-  .tv-player-name { font-size: 1.5rem; }
-  .score-val { font-size: 1.8rem; }
-  .score-item { min-width: 60px; padding: 10px; }
-}
-
-.victory-overlay {
-  background: radial-gradient(circle, rgba(15, 23, 42, 0.95), #020617);
-}
-
-.victory-card {
-  text-align: center;
-  animation: zoomIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-}
-
-@keyframes zoomIn {
-  from { transform: scale(0.8); opacity: 0; }
-  to { transform: scale(1); opacity: 1; }
+  .tv-header h1 { font-size: 2.8rem; }
+  .tv-player-name { font-size: 1.8rem; }
+  .score-val { font-size: 2.22rem; }
+  .tv-match-card { padding: 30px; }
 }
 
 .gold-text {
-  background: linear-gradient(to bottom, #fde047, #ca8a04);
+  background: linear-gradient(to bottom, #fff, #d4af37, #ca8a04);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
-  font-weight: 900;
-  text-transform: uppercase;
 }

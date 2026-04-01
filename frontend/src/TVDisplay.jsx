@@ -72,8 +72,8 @@ export default function TVDisplay() {
   return (
     <div className="tv-container">
       <header className="tv-header">
-        <h1>Torneio Beach Tennis</h1>
-        <p>• Placar em Tempo Real •</p>
+        <h1>Careca’s</h1>
+        <p>• Beach Club •</p>
       </header>
 
       <div className="tv-grid">
@@ -88,21 +88,21 @@ export default function TVDisplay() {
           <div key={match.id} className={`glass-panel tv-match-card ${match.status === 'finished' ? 'finished' : ''}`}>
             <span className="tv-match-category">{match.category_name}</span>
             
-            <div className="tv-teams-container">
-              <div className="tv-team-block">
+            <div className="tv-teams-container" style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 20}}>
+              <div className="tv-team-block" style={{flex: 1, textAlign: 'center'}}>
                 <div className="tv-player-name">{match.pair1_name}</div>
-                <div className="tv-scores">
+                <div className="tv-scores" style={{display: 'flex', justifyContent: 'center', gap: 10}}>
                   <div className="score-item"><span className="score-label">S</span><span className="score-val">{match.pair1_sets}</span></div>
                   <div className="score-item"><span className="score-label">G</span><span className="score-val">{match.pair1_games}</span></div>
                   <div className="score-item"><span className="score-label">PTS</span><span className="score-val points">{match.pair1_score}</span></div>
                 </div>
               </div>
 
-              <div className="tv-vs-circle">VS</div>
+              <div className="tv-vs-circle" style={{margin: '0 20px'}}>VS</div>
 
-              <div className="tv-team-block">
+              <div className="tv-team-block" style={{flex: 1, textAlign: 'center'}}>
                 <div className="tv-player-name">{match.pair2_name}</div>
-                <div className="tv-scores">
+                <div className="tv-scores" style={{display: 'flex', justifyContent: 'center', gap: 10}}>
                    <div className="score-item"><span className="score-label">PTS</span><span className="score-val points">{match.pair2_score}</span></div>
                    <div className="score-item"><span className="score-label">G</span><span className="score-val">{match.pair2_games}</span></div>
                    <div className="score-item"><span className="score-label">S</span><span className="score-val">{match.pair2_sets}</span></div>
@@ -111,7 +111,7 @@ export default function TVDisplay() {
             </div>
 
             {match.status === 'finished' && (
-              <div style={{marginTop: 30, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, color: 'var(--accent-success)', fontWeight: 'bold'}}>
+              <div style={{marginTop: 30, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, color: 'var(--accent-primary)', fontWeight: 'bold'}}>
                 <Trophy size={18} /> PARTIDA FINALIZADA
               </div>
             )}
@@ -124,12 +124,12 @@ export default function TVDisplay() {
       </div>
 
       {victory && (
-        <div className="victory-overlay" style={{position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 9999}}>
-          <div className="victory-card glass-panel" style={{padding: '80px', borderRadius: '40px', textAlign: 'center', border: '2px solid var(--accent-warning)', boxShadow: '0 0 50px rgba(245, 158, 11, 0.3)'}}>
-            <Trophy size={100} color="#fde047" style={{marginBottom: 30}} />
-            <div className="gold-text" style={{fontSize: '3rem', marginBottom: 10}}>GRANDE VENCEDOR</div>
-            <div style={{fontSize: '6rem', fontWeight: 900, marginBottom: 20}}>{victory.winner_name}</div>
-            <div style={{fontSize: '2.5rem', color: 'var(--accent-primary)', textTransform: 'uppercase', letterSpacing: 4}}>{victory.category_name}</div>
+        <div className="victory-overlay" style={{position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 9999, background: 'rgba(0,0,0,0.9)'}}>
+          <div className="victory-card glass-panel" style={{padding: '80px', borderRadius: '40px', textAlign: 'center', border: '3px solid var(--accent-primary)', boxShadow: '0 0 50px rgba(212, 175, 55, 0.4)'}}>
+            <Trophy size={120} color="var(--accent-primary)" style={{marginBottom: 30}} />
+            <div className="gold-text" style={{fontSize: '3.5rem', marginBottom: 10}}>GRANDE VENCEDOR</div>
+            <div style={{fontSize: '6.5rem', fontWeight: 900, marginBottom: 20, color: '#fff'}}>{victory.winner_name}</div>
+            <div style={{fontSize: '3rem', color: 'var(--accent-primary)', textTransform: 'uppercase', letterSpacing: 8}}>{victory.category_name}</div>
           </div>
         </div>
       )}
