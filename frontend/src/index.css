@@ -2,181 +2,161 @@
 
 :root {
   --bg-main: #000000;
-  --panel-bg: #0c0a09;
-  --glass-bg: rgba(12, 10, 9, 0.85);
-  --glass-border: rgba(212, 175, 55, 0.2);
-  --accent-primary: #d4af37; /* Dourado Logo */
-  --accent-secondary: #fde047; /* Dourado Brilho */
-  --accent-success: #22c55e;
-  --accent-danger: #ef4444;
+  --accent-primary: #d4af37;
+  --accent-secondary: #fde047;
   --text-primary: #ffffff;
   --text-secondary: #a8a29e;
-  --gold-shadow: 0 0 20px rgba(212, 175, 55, 0.2);
+  --glass-bg: rgba(15, 15, 15, 0.8);
+  --glass-border: rgba(212, 175, 55, 0.2);
   font-family: 'Inter', sans-serif;
 }
 
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-  -webkit-font-smoothing: antialiased;
-}
+* { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {
-  background: radial-gradient(circle at top right, #1c1917, #000000);
-  color: var(--text-primary);
+  background: #000;
+  color: #fff;
   min-height: 100vh;
+  overflow-x: hidden;
 }
 
 .glass-panel {
   background: var(--glass-bg);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(12px);
   border: 1px solid var(--glass-border);
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
 }
 
-/* --- TV DISPLAY CARECA'S --- */
-.tv-container {
-  padding: 50px;
-  min-height: 100vh;
+/* --- LAYOUT DO ADMIN (FIX) --- */
+.admin-layout {
+  display: flex;
+  width: 100vw;
+  height: 100vh;
+  position: fixed;
+  top: 0; left: 0;
 }
 
-.tv-header {
-  margin-bottom: 60px;
-  text-align: center;
+.admin-sidebar {
+  width: 260px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: 25px 0;
+  border-right: 1px solid var(--glass-border);
+  flex-shrink: 0;
 }
 
-.tv-header h1 {
-  font-size: 5rem;
+.sidebar-brand {
+  font-weight: 900;
+  color: var(--accent-primary);
+  font-size: 1.2rem;
+  letter-spacing: 2px;
+  padding: 0 25px 25px;
+  border-bottom: 1px solid var(--glass-border);
+  margin-bottom: 20px;
+}
+
+.admin-nav {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  padding: 0 15px;
+}
+
+.nav-link {
+  padding: 12px 15px;
+  border-radius: 8px;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-bottom: 5px;
+}
+
+.nav-link:hover { background: rgba(212, 175, 55, 0.1); color: #fff; }
+.nav-link.active { background: rgba(212, 175, 55, 0.2); color: var(--accent-primary); font-weight: 700; }
+
+.admin-main {
+  flex: 1;
+  height: 100%;
+  overflow-y: auto;
+  padding: 40px;
+  background: #000;
+}
+
+.view-title {
+  font-size: 2.2rem;
   font-weight: 900;
   text-transform: uppercase;
-  background: linear-gradient(to bottom, #fde047, #d4af37, #ca8a04);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  letter-spacing: -3px;
+  margin-bottom: 30px;
+  letter-spacing: -1px;
 }
 
-.tv-header p {
-  color: #fff;
-  letter-spacing: 12px;
-  text-transform: uppercase;
-  font-weight: 400;
-  margin-top: -10px;
-  opacity: 0.8;
+/* --- CARDS DE PARTIDA (ADMIN) --- */
+.match-ctrl-card {
+  padding: 30px;
+  border-radius: 20px;
+  margin-bottom: 20px;
+  border-left: 6px solid var(--accent-primary);
 }
 
-.tv-grid {
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 25px;
+}
+
+.cat-badge {
+  background: rgba(212, 175, 55, 0.1);
+  color: var(--accent-primary);
+  padding: 4px 12px;
+  border-radius: 6px;
+  font-weight: 800;
+  font-size: 0.8rem;
+}
+
+.match-teams-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(650px, 1fr));
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
   gap: 30px;
 }
 
-.tv-match-card {
-  border-radius: 28px;
-  padding: 45px;
-  position: relative;
-  border-left: 8px solid var(--accent-primary);
+.team-control h3 { font-size: 1.5rem; margin-bottom: 10px; }
+.score-summary { color: var(--text-secondary); font-size: 1.1rem; margin-bottom: 15px; }
+.score-summary b { color: var(--accent-primary); }
+
+.score-btns { display: flex; gap: 10px; justify-content: center; }
+.score-btns button {
+  width: 50px; height: 50px;
+  border-radius: 12px; border: none;
+  font-size: 1.5rem; font-weight: bold; color: #000;
+  cursor: pointer;
+}
+.btn-add { background: var(--accent-primary); }
+.btn-sub { background: #333; color: #fff; }
+
+.btn-primary {
+  background: linear-gradient(to right, #d4af37, #ca8a04);
+  color: #000; font-weight: 900; border: none;
+  padding: 15px; border-radius: 12px; cursor: pointer;
 }
 
-.tv-match-category {
-  position: absolute;
-  top: 25px; right: 25px;
-  background: rgba(212, 175, 55, 0.1);
-  color: var(--accent-primary);
-  padding: 8px 20px;
-  border-radius: 8px;
-  font-weight: 800;
-  text-transform: uppercase;
-  font-size: 0.9rem;
-  border: 1px solid var(--glass-border);
-}
-
-.tv-player-name {
-  font-size: 2.6rem;
-  font-weight: 900;
-  color: #fff;
-}
-
-.score-item {
-  background: #000;
-  padding: 18px;
-  border-radius: 12px;
-  min-width: 90px;
-  border: 1px solid var(--glass-border);
-}
-
-.score-label {
-  font-size: 0.75rem;
-  color: var(--text-secondary);
-  text-transform: uppercase;
-  margin-bottom: 5px;
-  display: block;
-}
-
-.score-val {
-  font-size: 3rem;
-  font-weight: 900;
-  font-family: 'Inter', sans-serif;
-}
-
-.score-val.points {
-  color: var(--accent-primary);
-  text-shadow: 0 0 15px rgba(212, 175, 55, 0.5);
-}
-
-.tv-vs-circle {
-  width: 70px;
-  height: 70px;
-  border-radius: 50%;
-  background: var(--glass-border);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 900;
-  color: var(--text-secondary);
-  font-size: 1.4rem;
-}
-
-/* --- ADMIN CARECA'S --- */
-.admin-sidebar {
-  width: 300px;
-  background: #000;
-  border-right: 1px solid var(--glass-border);
-}
-
-.admin-sidebar h1 {
-  color: var(--accent-primary);
-  padding: 20px;
-  text-transform: uppercase;
-  font-size: 1.1rem;
-  letter-spacing: 2px;
-}
-
-.nav-link.active {
-  background: linear-gradient(to right, rgba(212, 175, 55, 0.15), transparent);
-  color: var(--accent-primary);
-  border-left: 4px solid var(--accent-primary);
-}
-
-button.btn-primary {
-  background: linear-gradient(135deg, #d4af37, #ca8a04);
-  color: #000;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-}
-
-/* --- RESPONSIVIDADE --- */
+/* --- MOBILE --- */
 @media (max-width: 768px) {
-  .tv-header h1 { font-size: 2.8rem; }
-  .tv-player-name { font-size: 1.8rem; }
-  .score-val { font-size: 2.22rem; }
-  .tv-match-card { padding: 30px; }
+  .admin-layout { flex-direction: column; overflow: auto; position: relative; height: auto; }
+  .admin-sidebar { width: 100%; height: auto; border-right: none; border-bottom: 1px solid var(--glass-border); padding: 10px 0; }
+  .sidebar-brand { display: none; }
+  .admin-nav { flex-direction: row; overflow-x: auto; padding: 5px; }
+  .nav-link { flex-direction: column; font-size: 0.7rem; min-width: 80px; margin-bottom: 0; padding: 10px; }
+  .admin-main { padding: 20px; }
+  .match-teams-grid { grid-template-columns: 1fr; gap: 40px; }
+  .vs-label { display: none; }
 }
 
-.gold-text {
-  background: linear-gradient(to bottom, #fff, #d4af37, #ca8a04);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
+/* --- TV --- */
+.tv-container { padding: 40px; text-align: center; }
+.tv-header h1 { font-size: 4rem; color: var(--accent-primary); margin-bottom: 10px; text-transform: uppercase; }
+.tv-player-name { font-size: 2.2rem; font-weight: 900; }
+.score-val { font-size: 3rem; font-weight: 900; color: var(--accent-primary); }
