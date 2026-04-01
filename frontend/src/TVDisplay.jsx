@@ -1,26 +1,31 @@
 import { useEffect, useState } from 'react';
 import { supabase } from './supabase';
-import { Trophy, Clock } from 'lucide-react';
+import { Trophy, Clock, MapPin, Star } from 'lucide-react';
 
 export default function TVDisplay() {
   const [matches, setMatches] = useState([]);
   const [victory, setVictory] = useState(null);
+  const [currentTime, setCurrentTime] = useState(new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }));
+  const [callingMatch, setCallingMatch] = useState(null);
 
   const loadMatches = async (finishId = null) => {
     try {
       const { data: cData } = await supabase.from('categories').select('*');
       const { data: pData } = await supabase.from('pairs').select('*');
-      const { data: mData } = await supabase.from('matches').select('*').order('updated_at', { ascending: false });
+      const { data: coData } = await supabase.from('courts').select('*');
+      const { data: mData } = await supabase.from('matches').select('*').order('scheduled_time', { ascending: true });
 
       const catMap = {}; (cData || []).forEach(c => catMap[c.id] = c);
       const pairMap = {}; (pData || []).forEach(p => pairMap[p.id] = p);
+      const courtMap = {}; (coData || []).forEach(c => courtMap[c.id] = c);
 
       const formatted = (mData || []).map(m => ({
         ...m,
         pair1_name: pairMap[m.pair1_id]?.name || '?',
         pair2_name: pairMap[m.pair2_id]?.name || '?',
         winner_name: pairMap[m.winner_id]?.name || '?',
-        category_name: catMap[m.category_id]?.name || 'Geral'
+        category_name: catMap[m.category_id]?.name || 'Geral',
+        court_name: courtMap[m.court_id]?.name || 'A definir'
       }));
 
       setMatches(formatted);
@@ -42,83 +47,111 @@ export default function TVDisplay() {
 
   useEffect(() => {
     loadMatches();
+    const timer = setInterval(() => {
+      const now = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+      setCurrentTime(now);
+    }, 10000);
+
     const ch = supabase.channel('tv_rt').on('postgres_changes', { event:'*', schema:'public', table:'matches' }, (p) => {
         if (p.new && p.new.status === 'finished' && p.old.status !== 'finished') { loadMatches(p.new.id); }
         else { loadMatches(); }
       }).subscribe();
-    return () => supabase.removeChannel(ch);
+    
+    return () => { clearInterval(timer); supabase.removeChannel(ch); };
   }, []);
 
+  // Lógica de Chamada de Dupla
+  useEffect(() => {
+    const pending = matches.filter(m => m.status === 'pending' && m.scheduled_time === currentTime);
+    if (pending.length > 0 && !callingMatch) {
+      setCallingMatch(pending[0]);
+      setTimeout(() => setCallingMatch(null), 15000);
+    }
+  }, [currentTime, matches]);
+
+  // Agrupar por categoria
   const activeMatches = matches.filter(m => m.status !== 'finished');
-  const lastResults = matches.filter(m => m.status === 'finished').slice(0, 3);
+  const categoriesPresent = [...new Set(activeMatches.map(m => m.category_name))];
+  const lastResults = matches.filter(m => m.status === 'finished').slice(0, 4);
 
   return (
-    <div className="tv-container" style={{background: '#000', minHeight: '100vh', color: '#fff', padding: '50px'}}>
-      <header className="tv-header" style={{textAlign: 'center', marginBottom: '80px'}}>
-        <h1 style={{fontSize: '5rem', fontWeight: 950, color: 'var(--accent-primary)', textTransform: 'uppercase'}}>Careca’s Club</h1>
-        <p style={{letterSpacing: 10, opacity: 0.6}}>• RESULTADOS AO VIVO •</p>
+    <div className="tv-container" style={{background: '#000', minHeight: '100vh', color: '#fff', padding: '40px', position: 'relative', overflow: 'hidden'}}>
+      
+      {/* Relógio e Logo */}
+      <header style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 60, borderBottom: '1px solid rgba(212,175,55,0.2)', paddingBottom: 20}}>
+        <div>
+           <h1 style={{fontSize: '3.5rem', fontWeight: 950, color: 'var(--accent-primary)', textTransform: 'uppercase', margin: 0}}>Careca’s Club</h1>
+           <p style={{letterSpacing: 8, opacity: 0.5, fontSize: '0.8rem'}}>Torneio em Tempo Real</p>
+        </div>
+        <div style={{textAlign: 'right'}}>
+           <div style={{fontSize: '3rem', fontWeight: 900, color: '#fff'}}>{currentTime}</div>
+           <div style={{color: 'var(--accent-primary)', fontWeight: 800}}>HORÁRIO OFICIAL</div>
+        </div>
       </header>
 
-      <div className="tv-grid" style={{maxWidth: '1200px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 30}}>
-        {activeMatches.map(m => (
-          <div key={m.id} className="glass-panel" style={{padding: 50, borderRadius: 40, borderLeft: '15px solid var(--accent-primary)'}}>
-            <span style={{background: 'rgba(212,175,55,0.1)', color: 'var(--accent-primary)', padding: '10px 25px', borderRadius: 15, fontWeight: 900}}>{m.category_name}</span>
-            <div style={{display: 'flex', alignItems: 'center', gap: 50, marginTop: 30, justifyContent:'center'}}>
-               <div style={{flex: 1, fontSize: '3.5rem', fontWeight: 900, textAlign: 'right'}}>{m.pair1_name}</div>
-               <div style={{fontSize: '2rem', fontWeight: 900, color: '#333'}}>VS</div>
-               <div style={{flex: 1, fontSize: '3.5rem', fontWeight: 900, textAlign: 'left'}}>{m.pair2_name}</div>
+      <div style={{display: 'grid', gridTemplateColumns: '1fr 350px', gap: 40}}>
+        
+        {/* Painel Principal: Jogos por Categoria */}
+        <section>
+          {categoriesPresent.map(cat => (
+            <div key={cat} style={{marginBottom: 40}}>
+              <h2 style={{color: 'var(--accent-primary)', fontSize: '1.2rem', textTransform: 'uppercase', letterSpacing: 4, marginBottom: 20, display: 'flex', alignItems: 'center', gap: 15}}>
+                <Star size={18}/> {cat}
+              </h2>
+              <div style={{display: 'grid', gap: 15}}>
+                {activeMatches.filter(m => m.category_name === cat).map(m => (
+                  <div key={m.id} className="glass-panel" style={{padding: '25px 35px', borderRadius: 25, borderLeft: '10px solid var(--accent-primary)', display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
+                    <div style={{flex: 1}}>
+                       <div style={{fontSize: '2rem', fontWeight: 900}}>{m.pair1_name} <span style={{opacity: 0.2, fontSize: '1rem', margin: '0 10px'}}>VS</span> {m.pair2_name}</div>
+                    </div>
+                    <div style={{display: 'flex', gap: 30, alignItems: 'center'}}>
+                       <div style={{textAlign: 'center'}}>
+                          <div style={{fontSize: '0.7rem', opacity: 0.5, fontWeight: 900}}>QUADRA</div>
+                          <div style={{fontSize: '1.4rem', fontWeight: 900, color: 'var(--accent-primary)'}}>{m.court_name}</div>
+                       </div>
+                       <div style={{textAlign: 'center', background: 'rgba(255,255,255,0.05)', padding: '10px 15px', borderRadius: 12}}>
+                          <div style={{fontSize: '0.7rem', opacity: 0.5, fontWeight: 900}}>INÍCIO</div>
+                          <div style={{fontSize: '1.4rem', fontWeight: 900}}>{m.scheduled_time || '--:--'}</div>
+                       </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
-        ))}
-
-        {lastResults.length > 0 && <h2 style={{marginTop: 50, color: 'var(--accent-primary)', textTransform:'uppercase', fontSize:'1rem', letterSpacing:5}}>Últimos Resultados</h2>}
-        <div style={{display:'grid', gap: 15}}>
-          {lastResults.map(m => (
-             <div key={m.id} className="glass-panel" style={{
-               padding: 25, 
-               borderRadius: 25, 
-               display: 'grid', 
-               gridTemplateColumns: '1fr auto 1fr', 
-               alignItems: 'center', 
-               gap: 20,
-               opacity: 0.9,
-               background: 'rgba(255,255,255,0.03)'
-             }}>
-                {/* Lado Esquerdo */}
-                <span style={{fontSize: '1.8rem', fontWeight: 900, textAlign: 'right'}}>
-                  <span style={{opacity: 0.7, marginRight: 15, fontSize: '1.5rem'}}>{m.pair1_name}</span> 
-                  <b style={{color: 'var(--accent-primary)', fontSize: '2.2rem'}}>{m.pair1_games}</b>
-                </span>
-
-                {/* Centro (X ou Tie-break) */}
-                <div style={{minWidth: 120, textAlign: 'center', display: 'flex', justifyContent: 'center', alignItems: 'center'}}>
-                  {m.pair1_tiebreak || m.pair2_tiebreak ? (
-                     <div style={{
-                       fontSize: '1.2rem', 
-                       color: '#fff', 
-                       background: 'rgba(212,175,55,0.2)', 
-                       padding: '5px 15px', 
-                       borderRadius: 10,
-                       fontWeight: 900,
-                       border: '1px solid var(--accent-primary)'
-                     }}>
-                        {m.pair1_tiebreak}-{m.pair2_tiebreak}
-                     </div>
-                  ) : (
-                    <span style={{color: 'var(--accent-primary)', fontWeight: 900, fontSize: '1.2rem', opacity: 0.5}}>X</span>
-                  )}
-                </div>
-
-                {/* Lado Direito */}
-                <span style={{fontSize: '1.8rem', fontWeight: 900, textAlign: 'left'}}>
-                  <b style={{color: 'var(--accent-primary)', fontSize: '2.2rem', marginRight: 15}}>{m.pair2_games}</b>
-                  <span style={{opacity: 0.7, fontSize: '1.5rem'}}>{m.pair2_name}</span>
-                </span>
-             </div>
           ))}
-        </div>
+          {activeMatches.length === 0 && <div style={{textAlign:'center', padding:100, opacity:0.2, fontSize:'2rem'}}>Aguardando próximas partidas...</div>}
+        </section>
+
+        {/* Sidebar: Últimos Resultados */}
+        <aside>
+           <h2 style={{fontSize: '1rem', opacity: 0.5, letterSpacing: 3, marginBottom: 20, textTransform: 'uppercase'}}>Encerrados</h2>
+           <div style={{display: 'grid', gap: 15}}>
+             {lastResults.map(m => (
+               <div key={m.id} className="glass-panel" style={{padding: 20, borderRadius: 20, opacity: 0.7}}>
+                  <div style={{fontSize: '0.6rem', color: 'var(--accent-primary)', fontWeight: 900, marginBottom: 8}}>{m.category_name}</div>
+                  <div style={{fontSize: '1rem', fontWeight: 900}}>{m.pair1_name} <b style={{color:'var(--accent-primary)'}}>{m.pair1_games}</b></div>
+                  <div style={{fontSize: '1rem', fontWeight: 900}}>{m.pair2_name} <b style={{color:'var(--accent-primary)'}}>{m.pair2_games}</b></div>
+               </div>
+             ))}
+           </div>
+        </aside>
       </div>
 
+      {/* OVERLAY: Chamada de Dupla (Alert) */}
+      {callingMatch && (
+        <div style={{position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(0,0,0,0.95)', zIndex: 20000, display: 'flex', justifyContent: 'center', alignItems: 'center'}}>
+           <div style={{textAlign: 'center', animation: 'pulse 1.5s infinite'}}>
+              <Clock size={120} color="var(--accent-primary)" style={{marginBottom: 30}} />
+              <h2 style={{fontSize: '2rem', letterSpacing: 10, opacity: 0.6}}>CHAMADA DE JOGO</h2>
+              <h1 style={{fontSize: '5rem', fontWeight: 950, margin: '20px 0'}}>{callingMatch.pair1_name} <br/> <small style={{fontSize:'2rem', opacity:0.2}}>X</small> <br/> {callingMatch.pair2_name}</h1>
+              <div style={{background: 'var(--accent-primary)', color: '#000', padding: '20px 50px', borderRadius: 20, fontSize: '2.5rem', fontWeight: 900, marginTop: 40}}>
+                DIRIJAM-SE À {callingMatch.court_name.toUpperCase()}
+              </div>
+           </div>
+        </div>
+      )}
+
+      {/* OVERLAY: Vitória */}
       {victory && (
         <div style={{position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(0,0,0,0.98)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 10000}}>
            <div style={{textAlign: 'center'}}>
@@ -129,6 +162,14 @@ export default function TVDisplay() {
            </div>
         </div>
       )}
+
+      <style>{`
+        @keyframes pulse {
+          0% { transform: scale(1); }
+          50% { transform: scale(1.05); }
+          100% { transform: scale(1); }
+        }
+      `}</style>
     </div>
   );
 }
