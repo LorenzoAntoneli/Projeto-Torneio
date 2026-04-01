@@ -33,7 +33,18 @@ export default function Admin() {
       const { data: tData } = await supabase.from('tournaments').select('*');
       setTournaments(tData || []);
       const { data: mData } = await supabase.from('matches').select('*, pair1:pairs!matches_pair1_id_fkey(name), pair2:pairs!matches_pair2_id_fkey(name), category:categories(name)').order('updated_at', { ascending: false });
-      const formatted = (mData || []).map(m => ({ ...m, pair1_name: m.pair1?.name, pair2_name: m.pair2?.name, category_name: m.category?.name }));
+      const formatted = (mData || []).map(m => ({ 
+        ...m, 
+        pair1_name: m.pair1?.name || '?', 
+        pair2_name: m.pair2?.name || '?', 
+        category_name: m.category?.name || 'Geral',
+        pair1_score: m.pair1_score ?? '0',
+        pair2_score: m.pair2_score ?? '0',
+        pair1_games: m.pair1_games ?? 0,
+        pair2_games: m.pair2_games ?? 0,
+        pair1_sets: m.pair1_sets ?? 0,
+        pair2_sets: m.pair2_sets ?? 0
+      }));
       setMatches(formatted);
     } catch(e) { console.error(e); }
   };
@@ -58,7 +69,7 @@ export default function Admin() {
 
   const logout = () => { localStorage.removeItem('bt_session'); setSession(null); };
 
-  const createTournament = async () => { if (!newTName) return; await supabase.from('tournaments').insert([{ name: newTName, max_pairs: newTMax }]); setNewTName(''); loadData(); };
+  const createTournament = async () => { if (!newTName) return; await supabase.from('tournaments').insert([{ name: newTName, max_pairs: newTMax || 0 }]); setNewTName(''); loadData(); };
   const createCategory = async () => { if (!selectedT || !newCName) return; await supabase.from('categories').insert([{ tournament_id: selectedT, name: newCName }]); setNewCName(''); const { data } = await supabase.from('categories').select('*').eq('tournament_id', selectedT); setCategories(data || []); };
   
   const createPair = async () => { 
@@ -70,11 +81,39 @@ export default function Admin() {
     setPairs(data || []); 
   };
   
-  const createMatch = async () => { if (!selectedC || !matchP1 || !matchP2 || matchP1 === matchP2) return alert('Selecione duplas diferentes'); await supabase.from('matches').insert([{ category_id: selectedC, pair1_id: matchP1, pair2_id: matchP2 }]); setMatchP1(''); setMatchP2(''); loadData(); setActiveTab('scoreboard'); };
-  const startMatch = async (id) => { await supabase.from('matches').update({ status: 'in_progress', updated_at: new Date() }).eq('id', id); loadData(); };
+  const createMatch = async () => { 
+    if (!selectedC || !matchP1 || !matchP2 || matchP1 === matchP2) return alert('Selecione duplas diferentes'); 
+    await supabase.from('matches').insert([{ 
+      category_id: selectedC, 
+      pair1_id: matchP1, 
+      pair2_id: matchP2,
+      pair1_score: '0',
+      pair2_score: '0',
+      pair1_games: 0,
+      pair2_games: 0,
+      pair1_sets: 0,
+      pair2_sets: 0,
+      status: 'pending'
+    }]); 
+    setMatchP1(''); setMatchP2(''); loadData(); setActiveTab('scoreboard'); 
+  };
+
+  const startMatch = async (id) => { 
+    await supabase.from('matches').update({ status: 'in_progress', updated_at: new Date() }).eq('id', id); 
+    loadData(); 
+  };
 
   const handleScore = async (match, teamIdx, action) => {
-    let m = { ...match };
+    let m = { 
+      ...match,
+      pair1_score: match.pair1_score ?? '0',
+      pair2_score: match.pair2_score ?? '0',
+      pair1_games: match.pair1_games ?? 0,
+      pair2_games: match.pair2_games ?? 0,
+      pair1_sets: match.pair1_sets ?? 0,
+      pair2_sets: match.pair2_sets ?? 0
+    };
+    
     const getNextPt = (pt) => pt === '0' ? '15' : pt === '15' ? '30' : pt === '30' ? '40' : 'A';
     const getPrevPt = (pt) => pt === 'A' ? '40' : pt === '40' ? '30' : pt === '30' ? '15' : '0';
     
@@ -100,7 +139,7 @@ export default function Admin() {
     
     if (m.pair1_sets >= 1 || m.pair2_sets >= 1) { m.status = 'finished'; m.winner_id = m.pair1_sets >= 1 ? m.pair1_id : m.pair2_id; }
     
-    const { error } = await supabase.from('matches').update({ 
+    await supabase.from('matches').update({ 
       pair1_score: m.pair1_score, 
       pair2_score: m.pair2_score, 
       pair1_games: m.pair1_games, 
@@ -108,11 +147,10 @@ export default function Admin() {
       pair1_sets: m.pair1_sets, 
       pair2_sets: m.pair2_sets, 
       status: m.status, 
-      winner_id: m.winner_id, 
+      winner_id: m.winner_id || null, 
       updated_at: new Date() 
     }).eq('id', m.id);
     
-    if (error) console.error('Erro ao salvar placar:', error);
     loadData();
   };
 
@@ -125,7 +163,7 @@ export default function Admin() {
             const tN = row.Tournament || row.torneio || 'Torneio';
             const cN = row.Category || row.categoria || 'Geral';
             const pN = row.PairName || row.dupla || 'Anonimo';
-            if (!tCache[tN]) { let { data: t } = await supabase.from('tournaments').select('id').eq('name', tN).single(); if (!t) { const { data: nT } = await supabase.from('tournaments').insert([{ name: tN }]).select('id').single(); t = nT; } tCache[tN] = t.id; }
+            if (!tCache[tN]) { let { data: t } = await supabase.from('tournaments').select('id').eq('name', tN).single(); if (!t) { const { data: nT } = await supabase.from('tournaments').insert([{ name: tN, max_pairs:0 }]).select('id').single(); t = nT; } tCache[tN] = t.id; }
             const cKey = `${tCache[tN]}_${cN}`; if (!cCache[cKey]) { let { data: c } = await supabase.from('categories').select('id').eq('name', cN).eq('tournament_id', tCache[tN]).single(); if (!c) { const { data: nC } = await supabase.from('categories').insert([{ name: cN, tournament_id: tCache[tN] }]).select('id').single(); c = nC; } cCache[cKey] = c.id; }
             await supabase.from('pairs').insert([{ name: pN, category_id: cCache[cKey] }]);
           }
@@ -141,7 +179,7 @@ export default function Admin() {
         <Trophy size={60} color="var(--accent-primary)" style={{marginBottom:20}} />
         <h2 style={{color:'#fff', marginBottom:30}}>CARECA’S ADMIN</h2>
         <form onSubmit={login}>
-          <input type="password" placeholder="Senha de Acesso" value={password} onChange={e => setPassword(e.target.value)} style={{width:'100%', padding:12, marginBottom:20, background:'#111', border:'1px solid #333', color:'#fff'}} />
+          <input type="password" placeholder="Senha" value={password} onChange={e => setPassword(e.target.value)} style={{width:'100%', padding:12, marginBottom:20, background:'#111', border:'1px solid #333', color:'#fff'}} />
           <button type="submit" className="btn-primary" style={{width:'100%', padding:12, borderRadius:8, fontWeight:'bold'}}>ENTRAR</button>
         </form>
       </div>
@@ -179,17 +217,17 @@ export default function Admin() {
                   <div className="match-teams-grid">
                     <div className="team-control">
                       <h3 style={{color: '#fff'}}>{m.pair1_name}</h3>
-                      <div className="score-summary">S:<b>{m.pair1_sets}</b> | G:<b>{m.pair1_games}</b> | P:<b style={{fontSize:'1.4rem'}}>{m.pair1_score}</b></div>
+                      <div className="score-summary">S:<b>{m.pair1_sets}</b> | G:<b>{m.pair1_games}</b> | P:<b style={{fontSize:'1.8rem'}}>{m.pair1_score}</b></div>
                       {m.status === 'in_progress' && <div className="score-btns"><button onClick={() => handleScore(m, 1, '-pt')} className="btn-sub">-</button><button onClick={() => handleScore(m, 1, '+pt')} className="btn-add">+</button></div>}
                     </div>
                     <div className="vs-label">VS</div>
                     <div className="team-control">
                       <h3 style={{color: '#fff'}}>{m.pair2_name}</h3>
-                      <div className="score-summary">P:<b style={{fontSize:'1.4rem'}}>{m.pair2_score}</b> | G:<b>{m.pair2_games}</b> | S:<b>{m.pair2_sets}</b></div>
+                      <div className="score-summary">P:<b style={{fontSize:'1.8rem'}}>{m.pair2_score}</b> | G:<b>{m.pair2_games}</b> | S:<b>{m.pair2_sets}</b></div>
                       {m.status === 'in_progress' && <div className="score-btns"><button onClick={() => handleScore(m, 2, '-pt')} className="btn-sub">-</button><button onClick={() => handleScore(m, 2, '+pt')} className="btn-add">+</button></div>}
                     </div>
                   </div>
-                  {m.status === 'pending' && <button className="btn-primary" style={{width:'100%', marginTop:20, padding:15}} onClick={() => startMatch(m.id)}>INICIAR JOGO</button>}
+                  {m.status === 'pending' && <button className="btn-primary" style={{width:'100%', marginTop:20}} onClick={() => startMatch(m.id)}>INICIAR JOGO</button>}
                 </div>
               ))}
             </div>
@@ -198,19 +236,19 @@ export default function Admin() {
 
         {activeTab === 'tournaments' && (
           <div className="admin-view-container" style={{maxWidth:700}}>
-            <h2 className="view-title">Configuração do Torneio</h2>
+            <h2 className="view-title">Configurar Torneio</h2>
             <div className="glass-panel" style={{padding:30, borderRadius:20, marginBottom:30}}>
-              <h3>1. Criar Torneio</h3>
-              <input style={{width:'100%', margin:'15px 0'}} value={newTName} onChange={e => setNewTName(e.target.value)} placeholder="Ex: Open de Verão Careca’s" className="admin-input" />
+              <h3>1. Novo Torneio</h3>
+              <input style={{width:'100%', margin:'15px 0'}} value={newTName} onChange={e => setNewTName(e.target.value)} placeholder="Nome do Torneio" className="admin-input" />
               <button onClick={createTournament} className="btn-primary" style={{width:'100%'}}>Salvar Torneio</button>
             </div>
             {tournaments.length > 0 && <div className="glass-panel" style={{padding:30, borderRadius:20}}>
-               <h3>2. Criar Categoria</h3>
+               <h3>2. Adicionar Categoria</h3>
                <select style={{width:'100%', margin:'15px 0'}} value={selectedT} onChange={e => setSelectedT(e.target.value)}>
                   <option value="">Selecione o Torneio</option>
                   {tournaments.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
                </select>
-               {selectedT && <div style={{display:'flex', gap:10}}><input style={{flex:1}} placeholder="Ex: Masculino Pró" value={newCName} onChange={e => setNewCName(e.target.value)} /><button onClick={createCategory} className="btn-primary">Criar Categoria</button></div>}
+               {selectedT && <div style={{display:'flex', gap:10}}><input style={{flex:1}} placeholder="Masculino A, etc." value={newCName} onChange={e => setNewCName(e.target.value)} /><button onClick={createCategory} className="btn-primary">Criar</button></div>}
             </div>}
           </div>
         )}
@@ -230,12 +268,12 @@ export default function Admin() {
                   </select>
                </div>
                {selectedC && (
-                 <div style={{marginTop: 10}}>
+                 <div>
                    <div style={{display:'flex', gap:10, marginBottom:15}}>
-                      <input style={{flex:1}} placeholder="Nome Atleta 1" value={p1Name} onChange={e => setP1Name(e.target.value)} />
-                      <input style={{flex:1}} placeholder="Nome Atleta 2" value={p2Name} onChange={e => setP2Name(e.target.value)} />
+                      <input style={{flex:1}} placeholder="Atleta 1" value={p1Name} onChange={e => setP1Name(e.target.value)} />
+                      <input style={{flex:1}} placeholder="Atleta 2" value={p2Name} onChange={e => setP2Name(e.target.value)} />
                    </div>
-                   <button onClick={createPair} className="btn-primary" style={{width:'100%'}}>CADASTRAR DUPLA</button>
+                   <button onClick={createPair} className="btn-primary" style={{width:'100%'}}>CADASTRAR</button>
                  </div>
                )}
             </div>
@@ -244,7 +282,7 @@ export default function Admin() {
 
         {activeTab === 'matches' && (
           <div className="admin-view-container" style={{maxWidth:700}}>
-            <h2 className="view-title">Agendamento de Jogos</h2>
+            <h2 className="view-title">Agendar Jogos</h2>
             <div className="glass-panel" style={{padding:30, borderRadius:20}}>
                <div style={{display:'flex', gap:10, marginBottom:20}}>
                   <select style={{flex:1}} value={selectedT} onChange={e => setSelectedT(e.target.value)}>
@@ -257,7 +295,7 @@ export default function Admin() {
                   </select>
                </div>
                {selectedC && <div>
-                  <h3 style={{marginBottom: 15}}>Escolher Confronto</h3>
+                  <h3>Confronto</h3>
                   <div style={{display:'flex', gap:10, marginBottom:20, alignItems:'center'}}>
                      <select style={{flex:1}} value={matchP1} onChange={e => setMatchP1(e.target.value)}>
                         <option value="">Dupla 1</option>
@@ -269,7 +307,7 @@ export default function Admin() {
                         {pairs.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                      </select>
                   </div>
-                  <button onClick={createMatch} className="btn-primary" style={{width:'100%'}}>CRIAR PARTIDA AGORA</button>
+                  <button onClick={createMatch} className="btn-primary" style={{width:'100%'}}>CRIAR JOGO AGORA</button>
                </div>}
             </div>
           </div>
@@ -277,12 +315,11 @@ export default function Admin() {
 
         {activeTab === 'import' && (
           <div className="admin-view-container" style={{maxWidth:600}}>
-             <h2 className="view-title">Importar do LetzPlay</h2>
+             <h2 className="view-title">Importar Excel</h2>
              <div className="glass-panel" style={{padding:40, textAlign:'center'}}>
                 <FileUp size={48} color="var(--accent-primary)" style={{marginBottom:20}} />
-                <p style={{color:'#94a3b8', marginBottom:30}}>Arraste o arquivo CSV para automatizar as chaves.</p>
                 <input type="file" onChange={e => setImportFile(e.target.files[0])} style={{marginBottom:20, width:'100%'}} />
-                <button onClick={handleImport} className="btn-primary" style={{width:'100%', height:50}} disabled={!importFile || isImporting}>{isImporting ? 'Lendo Arquivo...' : 'Importar Dados'}</button>
+                <button onClick={handleImport} className="btn-primary" style={{width:'100%', height:50}} disabled={!importFile || isImporting}>{isImporting ? 'Carregando...' : 'Importar CSV'}</button>
              </div>
           </div>
         )}
