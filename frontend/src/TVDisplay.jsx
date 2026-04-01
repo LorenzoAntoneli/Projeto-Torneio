@@ -7,6 +7,14 @@ export default function TVDisplay() {
   const [victory, setVictory] = useState(null);
   const [currentTime, setCurrentTime] = useState(new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }));
   const [callingMatch, setCallingMatch] = useState(null);
+  const [calledIds, setCalledIds] = useState(new Set());
+  const [audioEnabled, setAudioEnabled] = useState(false);
+
+  // Som de Notificação (Estilo Chamada de Quadra)
+  const playChime = () => {
+    const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
+    audio.play().catch(() => console.log('Áudio bloqueado. Clique na tela para ativar.'));
+  };
 
   const loadMatches = async (finishId = null) => {
     try {
@@ -60,14 +68,18 @@ export default function TVDisplay() {
     return () => { clearInterval(timer); supabase.removeChannel(ch); };
   }, []);
 
-  // Lógica de Chamada de Dupla
+  // Lógica de Chamada de Dupla Sequencial com SOM
   useEffect(() => {
-    const pending = matches.filter(m => m.status === 'pending' && m.scheduled_time === currentTime);
-    if (pending.length > 0 && !callingMatch) {
-      setCallingMatch(pending[0]);
+    const toCallList = matches.filter(m => m.status === 'pending' && m.scheduled_time === currentTime && !calledIds.has(m.id));
+    
+    if (toCallList.length > 0 && !callingMatch) {
+      const nextMatch = toCallList[0];
+      setCallingMatch(nextMatch);
+      setCalledIds(prev => new Set(prev).add(nextMatch.id));
+      playChime(); // DISPARA O SOM
       setTimeout(() => setCallingMatch(null), 15000);
     }
-  }, [currentTime, matches]);
+  }, [currentTime, matches, calledIds, callingMatch]);
 
   // Agrupar por categoria
   const activeMatches = matches.filter(m => m.status !== 'finished');
@@ -186,6 +198,22 @@ export default function TVDisplay() {
           100% { transform: scale(1); }
         }
       `}</style>
+
+      {/* Overlay de Ativação Inicial (Para permitir áudio) */}
+      {!audioEnabled && (
+        <div style={{position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(0,0,0,0.95)', zIndex: 100000, display: 'flex', justifyContent: 'center', alignItems: 'center', flexDirection: 'column'}}>
+           <Trophy size={100} color="var(--accent-primary)" style={{marginBottom: 30}} />
+           <h2 style={{color: '#fff', fontSize: '2rem', marginBottom: 40, letterSpacing: 5}}>CARECA’S BEACH CLUB</h2>
+           <button 
+             className="btn-primary" 
+             style={{padding: '30px 60px', fontSize: '1.5rem', fontWeight: 900, borderRadius: 30, display: 'flex', alignItems: 'center', gap: 20}}
+             onClick={() => { setAudioEnabled(true); playChime(); }}
+           >
+             <Star size={30} fill="currentColor" /> INICIAR PAINEL DA TV
+           </button>
+           <p style={{marginTop: 30, opacity: 0.4, fontSize: '0.8rem'}}>Clique acima para ativar o sinal sonoro das quadras.</p>
+        </div>
+      )}
     </div>
   );
 }
