@@ -74,15 +74,45 @@ export default function TVDisplay() {
         {lastResults.length > 0 && <h2 style={{marginTop: 50, color: 'var(--accent-primary)', textTransform:'uppercase', fontSize:'1rem', letterSpacing:5}}>Últimos Resultados</h2>}
         <div style={{display:'grid', gap: 15}}>
           {lastResults.map(m => (
-             <div key={m.id} className="glass-panel" style={{padding: 25, borderRadius: 25, display: 'flex', justifyContent: 'space-between', alignItems: 'center', opacity: 0.8}}>
-                <span style={{fontSize: '1.8rem', fontWeight: 900}}>
-                  {m.pair1_name} <b style={{color: 'var(--accent-primary)', margin:'0 15px'}}>{m.pair1_games}</b>
+             <div key={m.id} className="glass-panel" style={{
+               padding: 25, 
+               borderRadius: 25, 
+               display: 'grid', 
+               gridTemplateColumns: '1fr auto 1fr', 
+               alignItems: 'center', 
+               gap: 20,
+               opacity: 0.9,
+               background: 'rgba(255,255,255,0.03)'
+             }}>
+                {/* Lado Esquerdo */}
+                <span style={{fontSize: '1.8rem', fontWeight: 900, textAlign: 'right'}}>
+                  <span style={{opacity: 0.7, marginRight: 15, fontSize: '1.5rem'}}>{m.pair1_name}</span> 
+                  <b style={{color: 'var(--accent-primary)', fontSize: '2.2rem'}}>{m.pair1_games}</b>
                 </span>
-                {m.pair1_tiebreak || m.pair2_tiebreak ? (
-                   <span style={{fontSize: '1rem', color: '#666'}}>({m.pair1_tiebreak}-{m.pair2_tiebreak})</span>
-                ) : <span style={{opacity:0.2}}>X</span>}
-                <span style={{fontSize: '1.8rem', fontWeight: 900}}>
-                  <b style={{color: 'var(--accent-primary)', margin:'0 15px'}}>{m.pair2_games}</b> {m.pair2_name}
+
+                {/* Centro (X ou Tie-break) */}
+                <div style={{minWidth: 120, textAlign: 'center', display: 'flex', justifyContent: 'center', alignItems: 'center'}}>
+                  {m.pair1_tiebreak || m.pair2_tiebreak ? (
+                     <div style={{
+                       fontSize: '1.2rem', 
+                       color: '#fff', 
+                       background: 'rgba(212,175,55,0.2)', 
+                       padding: '5px 15px', 
+                       borderRadius: 10,
+                       fontWeight: 900,
+                       border: '1px solid var(--accent-primary)'
+                     }}>
+                        {m.pair1_tiebreak}-{m.pair2_tiebreak}
+                     </div>
+                  ) : (
+                    <span style={{color: 'var(--accent-primary)', fontWeight: 900, fontSize: '1.2rem', opacity: 0.5}}>X</span>
+                  )}
+                </div>
+
+                {/* Lado Direito */}
+                <span style={{fontSize: '1.8rem', fontWeight: 900, textAlign: 'left'}}>
+                  <b style={{color: 'var(--accent-primary)', fontSize: '2.2rem', marginRight: 15}}>{m.pair2_games}</b>
+                  <span style={{opacity: 0.7, fontSize: '1.5rem'}}>{m.pair2_name}</span>
                 </span>
              </div>
           ))}

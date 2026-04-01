@@ -145,14 +145,56 @@ body {
 
 /* --- MOBILE --- */
 @media (max-width: 768px) {
-  .admin-layout { flex-direction: column; overflow: auto; position: relative; height: auto; }
-  .admin-sidebar { width: 100%; height: auto; border-right: none; border-bottom: 1px solid var(--glass-border); padding: 10px 0; }
+  .admin-layout { 
+    flex-direction: column; 
+    position: relative; 
+    height: auto; 
+    width: 100%; 
+    display: block;
+    overflow-y: visible;
+  }
+  .admin-sidebar { 
+    width: 100%; 
+    height: auto; 
+    position: sticky; 
+    top: 0; 
+    z-index: 1000;
+    padding: 5px 0;
+    background: #000;
+    border-bottom: 2px solid var(--accent-primary);
+    border-radius: 0;
+  }
   .sidebar-brand { display: none; }
-  .admin-nav { flex-direction: row; overflow-x: auto; padding: 5px; }
-  .nav-link { flex-direction: column; font-size: 0.7rem; min-width: 80px; margin-bottom: 0; padding: 10px; }
-  .admin-main { padding: 20px; }
-  .match-teams-grid { grid-template-columns: 1fr; gap: 40px; }
-  .vs-label { display: none; }
+  .admin-nav { 
+    flex-direction: row; 
+    overflow-x: auto; 
+    padding: 5px; 
+    gap: 5px;
+    justify-content: flex-start;
+  }
+  .nav-link { 
+    flex-direction: column; 
+    font-size: 0.6rem; 
+    min-width: 70px; 
+    padding: 8px 5px; 
+    margin-bottom: 0;
+    gap: 4px;
+    background: transparent;
+  }
+  .nav-link svg { width: 16px; height: 16px; }
+  .admin-main { 
+    padding: 20px 15px; 
+    height: auto;
+    overflow-y: visible;
+    background: #000;
+  }
+  .view-title { 
+    font-size: 1.4rem !important; 
+    text-align: center; 
+    margin-bottom: 20px;
+    width: 100%;
+  }
+  .match-ctrl-card { padding: 15px !important; }
 }
 
 /* --- TV --- */
