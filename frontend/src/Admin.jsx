@@ -53,9 +53,14 @@ export default function Admin() {
   const handleLogout = () => { localStorage.removeItem('bt_session'); setSession(null); };
 
   const finishMatch = async (match, g1, g2, t1, t2) => {
-    const winnerId = parseInt(g1) > parseInt(g2) ? match.pair1_id : match.pair2_id;
+    const games1 = parseInt(g1);
+    const games2 = parseInt(g2);
+    if (games1 === 6 && games2 === 6) return alert('⚠️ Em 6x6 o jogo deve ir até 7! Digite 7x6 para o vencedor.');
+    if (games1 === games2) return alert('⚠️ Não pode haver empate no Beach Tennis!');
+
+    const winnerId = games1 > games2 ? match.pair1_id : match.pair2_id;
     const { error } = await supabase.from('matches').update({ 
-      pair1_games: parseInt(g1), pair2_games: parseInt(g2), 
+      pair1_games: games1, pair2_games: games2, 
       pair1_tiebreak: t1 ? parseInt(t1) : 0, pair2_tiebreak: t2 ? parseInt(t2) : 0,
       status: 'finished', winner_id: winnerId, updated_at: new Date().toISOString()
     }).eq('id', match.id);

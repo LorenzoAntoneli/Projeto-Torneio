@@ -125,7 +125,7 @@ export default function TVDisplay() {
               <Trophy size={180} color="var(--accent-primary)" style={{marginBottom: 30}} />
               <h3 style={{fontSize: '1.5rem', color: '#fff', letterSpacing: 5, opacity: 0.6}}>{victory.category.toUpperCase()}</h3>
               <h1 style={{fontSize: '7rem', fontWeight: 950, color: '#fff', margin: '20px 0'}}>{victory.winner}</h1>
-              <div style={{fontSize: '2.5rem', color: 'var(--accent-primary)', fontWeight: '900'}}>{victory.score} • VENCEDORES DA PARTIDA! 🏆🎾</div>
+              <div style={{fontSize: '2.5rem', color: 'var(--accent-primary)', fontWeight: '900'}}>{victory.score} • VENCEU A PARTIDA! 🏆🎾</div>
            </div>
         </div>
       )}

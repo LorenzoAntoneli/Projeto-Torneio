@@ -126,6 +126,8 @@ input, select {
 }
 input:focus, select:focus { border-color: var(--accent-primary); }
 
+.mobile-nav { display: none; }
+
 /* --- MOBILE SPECIFIC --- */
 @media (max-width: 768px) {
   .sidebar { display: none; } /* Hide sidebar on mobile */
