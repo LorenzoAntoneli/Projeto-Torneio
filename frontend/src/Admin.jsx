@@ -242,7 +242,7 @@ export default function Admin() {
                     </div>
                   </div>
 
-                  {(m.pair1_tiebreak || m.pair2_tiebreak) && (
+                  {(m.pair1_tiebreak > 0 || m.pair2_tiebreak > 0) && (
                     <div style={{ textAlign: 'right', fontSize: '0.65rem', opacity: 0.3, marginTop: 8, fontStyle: 'italic' }}>
                       Pts Tie-break: ({m.pair1_tiebreak} - {m.pair2_tiebreak})
                     </div>
