@@ -11,27 +11,6 @@ export default function TVDisplay() {
   const [audioEnabled, setAudioEnabled] = useState(false);
   const [currentSlide, setCurrentSlide] = useState(0); // 0: Geral, 1: Próximas, 2: Resultados
 
-  // Som de Notificação Sintetizado (Ding-Dong Profissional)
-  const playChime = () => {
-    try {
-      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      const playNote = (freq, startTime, duration) => {
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(freq, startTime);
-        gain.gain.setValueAtTime(0.1, startTime);
-        gain.gain.exponentialRampToValueAtTime(0.0001, startTime + duration);
-        osc.connect(gain);
-        gain.connect(audioCtx.destination);
-        osc.start(startTime);
-        osc.stop(startTime + duration);
-      };
-      playNote(440, audioCtx.currentTime, 0.8);
-      playNote(349.23, audioCtx.currentTime + 0.3, 1.2);
-    } catch (e) { console.log('Erro áudio:', e); }
-  };
-
   const loadMatches = async (finishId = null) => {
     try {
       const { data: cData } = await supabase.from('categories').select('*');
@@ -81,13 +60,48 @@ export default function TVDisplay() {
       else loadMatches();
     }).subscribe();
 
-    // Ciclo de Slides (5 minutos = 300000ms)
+    // Ciclo de Slides (3 minutos = 180000ms)
     const slideTimer = setInterval(() => {
       setCurrentSlide(prev => (prev + 1) % 3);
-    }, 300000);
+    }, 180000);
     
     return () => { clearInterval(timer); clearInterval(slideTimer); supabase.removeChannel(ch); };
   }, []);
+
+  // Som de Notificação Sintetizado (Novo Sinal de Torneio - Repetitivo)
+  const playChime = () => {
+    try {
+      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      
+      const playSequence = () => {
+        const playNote = (freq, startTime, duration, vol) => {
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(freq, startTime);
+          gain.gain.setValueAtTime(vol, startTime);
+          gain.gain.exponentialRampToValueAtTime(0.0001, startTime + duration);
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.start(startTime);
+          osc.stop(startTime + duration);
+        };
+
+        // Triade descendente profissional (Volume 0.3 - Potente)
+        playNote(659.25, audioCtx.currentTime, 0.5, 0.4);      // Mi (E5)
+        playNote(523.25, audioCtx.currentTime + 0.2, 0.5, 0.4); // Dó (C5)
+        playNote(392.00, audioCtx.currentTime + 0.4, 0.8, 0.4); // Sol (G4)
+      };
+
+      // Tocar a sequência imediatamente
+      playSequence();
+      
+      // Repetir a cada 3.5 segundos durante os 15 segundos da animação
+      const interval = setInterval(playSequence, 3500);
+      setTimeout(() => clearInterval(interval), 14000); // Para um pouco antes de sumir a tela
+
+    } catch (e) { console.log('Erro áudio:', e); }
+  };
 
   useEffect(() => {
     const toCallList = matches.filter(m => m.status === 'pending' && m.scheduled_time === currentTime && !calledIds.has(m.id));
