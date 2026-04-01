@@ -106,7 +106,7 @@ export default function Admin() {
           <div className={`nav-item ${activeTab === 'history' ? 'active' : ''}`} onClick={() => setActiveTab('history')}><LayoutList size={20} /> Partidas (Encerradas)</div>
           <div className={`nav-item ${activeTab === 'matches' ? 'active' : ''}`} onClick={() => setActiveTab('matches')}><Gamepad2 size={20} /> Agendar Jogo</div>
           <div className={`nav-item ${activeTab === 'pairs' ? 'active' : ''}`} onClick={() => setActiveTab('pairs')}><UserPlus size={20} /> Duplas</div>
-          <div className={`nav-item ${activeTab === 'setup' ? 'active' : ''}`} onClick={() => setActiveTab('setup')}><Settings size={20} /> 1. Configurar</div>
+          <div className={`nav-item ${activeTab === 'setup' ? 'active' : ''}`} onClick={() => setActiveTab('setup')}><Settings size={20} />Configurar</div>
           <div style={{ marginTop: 'auto' }}><a href="/tv" target="_blank" className="nav-item" style={{ textDecoration: 'none' }}><Monitor size={20} /> Ver TV</a><div className="nav-item" onClick={handleLogout} style={{ color: 'var(--accent-secondary)' }}><LogOut size={20} /> Sair</div></div>
         </nav>
       </aside>

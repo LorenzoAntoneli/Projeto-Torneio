@@ -10,10 +10,11 @@ export default function TVDisplay() {
   const [calledIds, setCalledIds] = useState(new Set());
   const [audioEnabled, setAudioEnabled] = useState(false);
 
-  // Som de Notificação (Estilo Chamada de Quadra)
+  // Som de Notificação (DONG profissional)
   const playChime = () => {
-    const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
-    audio.play().catch(() => console.log('Áudio bloqueado. Clique na tela para ativar.'));
+    // URL mais estável e robusta
+    const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3');
+    audio.play().catch((e) => console.log('Áudio bloqueado:', e));
   };
 
   const loadMatches = async (finishId = null) => {
@@ -60,9 +61,14 @@ export default function TVDisplay() {
       setCurrentTime(now);
     }, 10000);
 
-    const ch = supabase.channel('tv_rt').on('postgres_changes', { event:'*', schema:'public', table:'matches' }, (p) => {
-        if (p.new && p.new.status === 'finished' && p.old.status !== 'finished') { loadMatches(p.new.id); }
-        else { loadMatches(); }
+    // Ajuste na detecção em tempo real (INSERT e UPDATE)
+    const ch = supabase.channel('tv_rt').on('postgres_changes', { event:'*', schema:'public', table:'matches' }, (payload) => {
+        console.log('RT Update:', payload);
+        if (payload.eventType === 'UPDATE' && payload.new.status === 'finished' && payload.old?.status !== 'finished') {
+          loadMatches(payload.new.id);
+        } else {
+          loadMatches();
+        }
       }).subscribe();
     
     return () => { clearInterval(timer); supabase.removeChannel(ch); };
@@ -76,18 +82,23 @@ export default function TVDisplay() {
       const nextMatch = toCallList[0];
       setCallingMatch(nextMatch);
       setCalledIds(prev => new Set(prev).add(nextMatch.id));
-      playChime(); // DISPARA O SOM
+      if (audioEnabled) playChime(); 
       setTimeout(() => setCallingMatch(null), 15000);
     }
-  }, [currentTime, matches, calledIds, callingMatch]);
+  }, [currentTime, matches, calledIds, callingMatch, audioEnabled]);
 
   // Agrupar por categoria
   const activeMatches = matches.filter(m => m.status !== 'finished');
   const categoriesPresent = [...new Set(activeMatches.map(m => m.category_name))];
-  const lastResults = matches.filter(m => m.status === 'finished').slice(0, 4);
+  
+  // Resultados: Ordenados pelo mais recente (updated_at)
+  const lastResults = matches
+    .filter(m => m.status === 'finished')
+    .sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at))
+    .slice(0, 8);
 
   return (
-    <div className="tv-container" style={{background: '#000', minHeight: '100vh', color: '#fff', padding: '40px', position: 'relative', overflow: 'hidden'}}>
+    <div className="tv-container" style={{background: '#000', minHeight: '100vh', color: '#fff', padding: '40px', position: 'relative'}}>
       
       {/* Relógio e Logo */}
       <header style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 60, borderBottom: '1px solid rgba(212,175,55,0.2)', paddingBottom: 20}}>
