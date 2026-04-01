@@ -56,11 +56,9 @@ export default function Admin() {
       }));
 
       setMatches(formatted);
-      if (selectedT) {
-        setCategories((cData || []).filter(c => c.tournament_id === selectedT));
-        setCourts((coData || []).filter(c => c.tournament_id === selectedT));
-      }
-      if (selectedC) setPairs((pData || []).filter(p => p.category_id === selectedC));
+      setCategories(cData || []);
+      setCourts(coData || []);
+      setPairs(pData || []);
     } catch (e) { console.error(e); }
   };
 
@@ -279,7 +277,7 @@ export default function Admin() {
             <h1 className="section-title">Criar Duplas</h1>
             <div className="app-card">
               <label className="input-label">Torneio e Categoria</label>
-              <div style={{ display: 'grid', gap: 10, marginBottom: 20 }}><select value={selectedT} onChange={e => setSelectedT(e.target.value)} style={{ marginBottom: 0 }}><option value="">Torneio...</option>{tournaments.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}</select><select value={selectedC} onChange={e => setSelectedC(e.target.value)} style={{ marginBottom: 0 }}><option value="">Categoria...</option>{categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></div>
+              <div style={{ display: 'grid', gap: 10, marginBottom: 20 }}><select value={selectedT} onChange={e => setSelectedT(e.target.value)} style={{ marginBottom: 0 }}><option value="">Torneio...</option>{tournaments.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}</select><select value={selectedC} onChange={e => setSelectedC(e.target.value)} style={{ marginBottom: 0 }}><option value="">Categoria...</option>{categories.filter(c => c.tournament_id === selectedT).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></div>
               {selectedC && <><label className="input-label">Nomes dos Atletas</label><input placeholder="Atleta 1" value={atleta1} onChange={e => setAtleta1(e.target.value)} /><input placeholder="Atleta 2" value={atleta2} onChange={e => setAtleta2(e.target.value)} /><button onClick={createPair} className="btn-primary" style={{ width: '100%', height: 55 }}>REGISTRAR DUPLA</button></>}
             </div>
           </div>
@@ -290,17 +288,17 @@ export default function Admin() {
             <h1 className="section-title">Agendar Jogos</h1>
             <div className="app-card">
               <label className="input-label">Torneio e Categoria</label>
-              <div style={{ display: 'grid', gap: 10, marginBottom: 20 }}><select value={selectedT} onChange={e => setSelectedT(e.target.value)} style={{ marginBottom: 0 }}><option value="">Torneio...</option>{tournaments.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}</select><select value={selectedC} onChange={e => setSelectedC(e.target.value)} style={{ marginBottom: 0 }}><option value="">Categoria...</option>{categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></div>
+              <div style={{ display: 'grid', gap: 10, marginBottom: 20 }}><select value={selectedT} onChange={e => setSelectedT(e.target.value)} style={{ marginBottom: 0 }}><option value="">Torneio...</option>{tournaments.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}</select><select value={selectedC} onChange={e => setSelectedC(e.target.value)} style={{ marginBottom: 0 }}><option value="">Categoria...</option>{categories.filter(c => c.tournament_id === selectedT).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></div>
               {selectedC && (
                 <>
                   <label className="input-label">Escolher Confronto</label>
-                  <select value={matchP1} onChange={e => setMatchP1(e.target.value)} style={{ marginBottom: 10 }}><option value="">Selecione Dupla 1</option>{pairs.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}</select>
+                  <select value={matchP1} onChange={e => setMatchP1(e.target.value)} style={{ marginBottom: 10 }}><option value="">Selecione Dupla 1</option>{pairs.filter(p => p.category_id === selectedC).map(p => <option key={p.id} value={p.id}>{p.name}</option>)}</select>
                   <div style={{ textAlign: 'center', fontWeight: 900, marginBottom: 10, color: 'var(--accent-primary)', fontSize: '0.7rem' }}>VERSUS</div>
-                  <select value={matchP2} onChange={e => setMatchP2(e.target.value)}><option value="">Selecione Dupla 2</option>{pairs.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}</select>
+                  <select value={matchP2} onChange={e => setMatchP2(e.target.value)}><option value="">Selecione Dupla 2</option>{pairs.filter(p => p.category_id === selectedC).map(p => <option key={p.id} value={p.id}>{p.name}</option>)}</select>
 
                   <label className="input-label" style={{ marginTop: 20 }}>Informações de Quadra</label>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                    <select value={matchCourt} onChange={e => setMatchCourt(e.target.value)}><option value="">Quadra...</option>{courts.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select>
+                    <select value={matchCourt} onChange={e => setMatchCourt(e.target.value)}><option value="">Quadra...</option>{courts.filter(c => c.tournament_id === selectedT).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select>
                     <input type="time" value={matchTime} onChange={e => setMatchTime(e.target.value)} />
                   </div>
 
@@ -318,18 +316,18 @@ export default function Admin() {
               <h2 style={{ color: 'var(--accent-primary)', marginBottom: 20, fontSize: '1.2rem' }}>Editar Partida</h2>
               <label className="input-label">Duplas</label>
               <select value={editP1} onChange={e => setEditP1(e.target.value)} style={{ marginBottom: 10 }}>
-                {pairs.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                {pairs.filter(p => p.category_id === editingMatch.category_id).map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
               </select>
               <div style={{ textAlign: 'center', fontWeight: 900, marginBottom: 10, color: 'var(--accent-primary)', fontSize: '0.7rem' }}>VERSUS</div>
               <select value={editP2} onChange={e => setEditP2(e.target.value)}>
-                {pairs.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                {pairs.filter(p => p.category_id === editingMatch.category_id).map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
               </select>
 
               <label className="input-label" style={{ marginTop: 20 }}>Quadra e Horário</label>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                 <select value={editCourt} onChange={e => setEditCourt(e.target.value)}>
                   <option value="">Nenhuma</option>
-                  {courts.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  {courts.filter(c => c.tournament_id === editingMatch.tournament_id).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>
                 <input type="time" value={editTime} onChange={e => setEditTime(e.target.value)} />
               </div>
