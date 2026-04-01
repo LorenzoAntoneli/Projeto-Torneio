@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from './supabase';
-import { Swords, LogOut, Monitor, PlusCircle, UserPlus, Gamepad2, Settings, MapPin, LayoutList, Trash2 } from 'lucide-react';
+import { Swords, LogOut, Monitor, PlusCircle, UserPlus, Gamepad2, Settings, MapPin, LayoutList, Trash2, Pencil } from 'lucide-react';
 
 export default function Admin() {
   const [session, setSession] = useState(localStorage.getItem('bt_session'));
@@ -26,6 +26,13 @@ export default function Admin() {
   const [matchP2, setMatchP2] = useState('');
   const [matchCourt, setMatchCourt] = useState('');
   const [matchTime, setMatchTime] = useState('');
+
+  // Edit States
+  const [editingMatch, setEditingMatch] = useState(null);
+  const [editP1, setEditP1] = useState('');
+  const [editP2, setEditP2] = useState('');
+  const [editCourt, setEditCourt] = useState('');
+  const [editTime, setEditTime] = useState('');
 
   const loadData = async () => {
     try {
@@ -93,6 +100,31 @@ export default function Admin() {
     if (error) alert(error.message); else loadData();
   };
 
+  const startEdit = (m) => {
+    setEditingMatch(m);
+    setEditP1(m.pair1_id);
+    setEditP2(m.pair2_id);
+    setEditCourt(m.court_id || '');
+    setEditTime(m.scheduled_time || '');
+  };
+
+  const saveEdit = async () => {
+    if (!editingMatch || !editP1 || !editP2) return;
+    const { error } = await supabase.from('matches').update({
+      pair1_id: editP1,
+      pair2_id: editP2,
+      court_id: editCourt || null,
+      scheduled_time: editTime || null,
+      updated_at: new Date().toISOString()
+    }).eq('id', editingMatch.id);
+
+    if (error) alert(error.message);
+    else {
+      setEditingMatch(null);
+      loadData();
+    }
+  };
+
   if (!session) return (
     <div style={{ height: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center', background: '#000', padding: 20 }}>
       <div className="app-card" style={{ width: '100%', maxWidth: 400, textAlign: 'center' }}>
@@ -133,7 +165,13 @@ export default function Admin() {
             {matches.filter(m => m.status !== 'finished').map(m => (
               <div key={m.id} className="app-card" style={{ borderLeftColor: 'var(--accent-primary)', paddingTop: 10 }}>
                 {/* Barra de Topo do Card (Ações) */}
-                <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '0 5px 10px 0' }}>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '0 5px 10px 0', gap: 8 }}>
+                  <button
+                    onClick={() => startEdit(m)}
+                    style={{ background: 'rgba(255,255,255,0.05)', border: 'none', color: 'var(--accent-primary)', cursor: 'pointer', padding: '8px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                  >
+                    < Pencil size={18} />
+                  </button>
                   <button
                     onClick={() => deleteMatch(m.id)}
                     style={{ background: 'rgba(255,77,77,0.1)', border: 'none', color: '#ff4d4d', cursor: 'pointer', padding: '8px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
@@ -269,6 +307,37 @@ export default function Admin() {
                   <button onClick={createMatch} className="btn-primary" style={{ width: '100%', height: 60, marginTop: 10 }}>GERAR JOGO E QUADRA</button>
                 </>
               )}
+            </div>
+          </div>
+        )}
+
+        {/* Modal de Edição */}
+        {editingMatch && (
+          <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.85)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000, padding: 20 }}>
+            <div className="app-card" style={{ width: '100%', maxWidth: 500, border: '1px solid #333' }}>
+              <h2 style={{ color: 'var(--accent-primary)', marginBottom: 20, fontSize: '1.2rem' }}>Editar Partida</h2>
+              <label className="input-label">Duplas</label>
+              <select value={editP1} onChange={e => setEditP1(e.target.value)} style={{ marginBottom: 10 }}>
+                {pairs.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+              </select>
+              <div style={{ textAlign: 'center', fontWeight: 900, marginBottom: 10, color: 'var(--accent-primary)', fontSize: '0.7rem' }}>VERSUS</div>
+              <select value={editP2} onChange={e => setEditP2(e.target.value)}>
+                {pairs.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+              </select>
+
+              <label className="input-label" style={{ marginTop: 20 }}>Quadra e Horário</label>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                <select value={editCourt} onChange={e => setEditCourt(e.target.value)}>
+                  <option value="">Nenhuma</option>
+                  {courts.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+                <input type="time" value={editTime} onChange={e => setEditTime(e.target.value)} />
+              </div>
+
+              <div style={{ display: 'flex', gap: 10, marginTop: 30 }}>
+                <button className="btn-primary" style={{ flex: 1 }} onClick={saveEdit}>SALVAR</button>
+                <button className="btn-primary" style={{ flex: 1, background: '#333' }} onClick={() => setEditingMatch(null)}>CANCELAR</button>
+              </div>
             </div>
           </div>
         )}
