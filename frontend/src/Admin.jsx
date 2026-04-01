@@ -147,6 +147,35 @@ export default function Admin() {
                 }}>Lançar Placar</button>
               </div>
             ))}
+            {matches.filter(m => m.status !== 'finished').length === 0 && <p style={{textAlign:'center', opacity:0.2, padding:20}}>Nenhum jogo em andamento.</p>}
+
+            {/* HISTÓRICO DE JOGOS ENCERRADOS */}
+            <h2 style={{fontSize: '0.9rem', opacity: 0.5, marginBottom: 15, marginTop: 40, textTransform: 'uppercase', letterSpacing: 2, textAlign: 'center'}}>• Partidas Encerradas</h2>
+            <div style={{display:'grid', gap:10}}>
+              {matches.filter(m => m.status === 'finished').map(m => (
+                <div key={m.id} className="app-card" style={{padding: 15, opacity: 0.8, borderLeft: '4px solid #333'}}>
+                   <div style={{display:'flex', justifyContent:'space-between', fontSize:'0.7rem', marginBottom:10}}>
+                      <span style={{color:'var(--accent-primary)', fontWeight:800}}>{m.category?.name}</span>
+                      <span style={{opacity:0.5}}>{new Date(m.updated_at).toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'})}</span>
+                   </div>
+                   <div style={{display:'flex', justifyContent:'space-between', alignItems:'center'}}>
+                      <div style={{flex: 1, fontWeight: m.winner_id === m.pair1_id ? 900 : 400, color: m.winner_id === m.pair1_id ? '#fff' : '#666'}}>
+                        {m.pair1?.name} <span style={{color:'var(--accent-primary)', marginLeft:10}}>{m.pair1_games}</span>
+                      </div>
+                      <div style={{fontSize:'0.8rem', opacity:0.3, margin:'0 10px'}}>X</div>
+                      <div style={{flex: 1, fontWeight: m.winner_id === m.pair2_id ? 900 : 400, color: m.winner_id === m.pair2_id ? '#fff' : '#666', textAlign:'right'}}>
+                        <span style={{color:'var(--accent-primary)', marginRight:10}}>{m.pair2_games}</span> {m.pair2?.name}
+                      </div>
+                   </div>
+                   {(m.pair1_tiebreak || m.pair2_tiebreak) && (
+                     <div style={{textAlign:'center', fontSize:'0.7rem', opacity:0.3, marginTop:5}}>
+                        Tie-break: {m.pair1_tiebreak} - {m.pair2_tiebreak}
+                     </div>
+                   )}
+                </div>
+              ))}
+              {matches.filter(m => m.status === 'finished').length === 0 && <p style={{textAlign:'center', opacity:0.2, fontSize:'0.8rem'}}>Nenhum resultado registrado ainda.</p>}
+            </div>
           </div>
         )}
 
