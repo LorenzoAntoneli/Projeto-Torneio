@@ -7,8 +7,8 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<TVDisplay />} />
-        <Route path="/admin" element={<Admin />} />
+        <Route path="/" element={<Admin />} />
+        <Route path="/tv" element={<TVDisplay />} />
       </Routes>
     </BrowserRouter>
   );
