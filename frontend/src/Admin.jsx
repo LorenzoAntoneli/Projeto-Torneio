@@ -332,9 +332,9 @@ export default function Admin() {
                 <input type="time" value={editTime} onChange={e => setEditTime(e.target.value)} />
               </div>
 
-              <div style={{ display: 'flex', gap: 10, marginTop: 30 }}>
-                <button className="btn-primary" style={{ flex: 1 }} onClick={saveEdit}>SALVAR</button>
-                <button className="btn-primary" style={{ flex: 1, background: '#333' }} onClick={() => setEditingMatch(null)}>CANCELAR</button>
+              <div style={{ display: 'grid', gap: 12, marginTop: 30 }}>
+                <button className="btn-primary" style={{ width: '100%', height: 60 }} onClick={saveEdit}>SALVAR ALTERAÇÕES</button>
+                <button className="btn-primary" style={{ width: '100%', height: 60, background: 'rgba(255,255,255,0.05)', color: '#888' }} onClick={() => setEditingMatch(null)}>VOLTAR / CANCELAR</button>
               </div>
             </div>
           </div>
