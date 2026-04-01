@@ -97,7 +97,7 @@ export default function Admin() {
     <div style={{ height: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center', background: '#000', padding: 20 }}>
       <div className="app-card" style={{ width: '100%', maxWidth: 400, textAlign: 'center' }}>
         <h2 style={{ color: 'var(--accent-primary)', marginBottom: 30, letterSpacing: 2 }}>CARECA’S ACCESS</h2>
-        <form onSubmit={handleLogin}><input type="password" placeholder="Senha Master" value={password} onChange={e => setPassword(e.target.value)} /><button type="submit" className="btn-primary" style={{ width: '100%', padding: 18 }}>ENTRAR AGORA</button></form>
+        <form onSubmit={handleLogin}><input type="password" placeholder="Senha" value={password} onChange={e => setPassword(e.target.value)} /><button type="submit" className="btn-primary" style={{ width: '100%', padding: 18 }}>ENTRAR AGORA</button></form>
       </div>
     </div>
   );
@@ -134,8 +134,8 @@ export default function Admin() {
               <div key={m.id} className="app-card" style={{ borderLeftColor: 'var(--accent-primary)', paddingTop: 10 }}>
                 {/* Barra de Topo do Card (Ações) */}
                 <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '0 5px 10px 0' }}>
-                  <button 
-                    onClick={() => deleteMatch(m.id)} 
+                  <button
+                    onClick={() => deleteMatch(m.id)}
                     style={{ background: 'rgba(255,77,77,0.1)', border: 'none', color: '#ff4d4d', cursor: 'pointer', padding: '8px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                   >
                     <Trash2 size={18} />
