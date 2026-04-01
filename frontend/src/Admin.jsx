@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from './supabase';
-import { Swords, LogOut, Monitor, PlusCircle, UserPlus, Gamepad2, Settings, MapPin, LayoutList } from 'lucide-react';
+import { Swords, LogOut, Monitor, PlusCircle, UserPlus, Gamepad2, Settings, MapPin, LayoutList, Trash2 } from 'lucide-react';
 
 export default function Admin() {
   const [session, setSession] = useState(localStorage.getItem('bt_session'));
@@ -87,6 +87,12 @@ export default function Admin() {
   const createPair = async () => { if (!selectedC || !atleta1 || !atleta2) return; await supabase.from('pairs').insert([{ category_id: selectedC, name: `${atleta1} / ${atleta2}` }]); setAtleta1(''); setAtleta2(''); loadData(); };
   const createMatch = async () => { if (!selectedT || !selectedC || !matchP1 || !matchP2) return; await supabase.from('matches').insert([{ tournament_id: selectedT, category_id: selectedC, pair1_id: matchP1, pair2_id: matchP2, court_id: matchCourt || null, scheduled_time: matchTime || null, status: 'pending' }]); loadData(); setActiveTab('scoreboard'); };
 
+  const deleteMatch = async (id) => {
+    if (!window.confirm('⚠️ Tem certeza que deseja APAGAR esta partida?')) return;
+    const { error } = await supabase.from('matches').delete().eq('id', id);
+    if (error) alert(error.message); else loadData();
+  };
+
   if (!session) return (
     <div style={{ height: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center', background: '#000', padding: 20 }}>
       <div className="app-card" style={{ width: '100%', maxWidth: 400, textAlign: 'center' }}>
@@ -125,7 +131,14 @@ export default function Admin() {
           <div>
             <h1 className="section-title">Em Quadra</h1>
             {matches.filter(m => m.status !== 'finished').map(m => (
-              <div key={m.id} className="app-card" style={{ borderLeftColor: 'var(--accent-primary)' }}>
+              <div key={m.id} className="app-card" style={{ borderLeftColor: 'var(--accent-primary)', position: 'relative' }}>
+                <button 
+                  onClick={() => deleteMatch(m.id)} 
+                  style={{ position: 'absolute', top: 15, right: 15, background: 'none', border: 'none', color: '#ff4d4d', cursor: 'pointer', opacity: 0.6 }}
+                >
+                  <Trash2 size={18} />
+                </button>
+
                 <div style={{ textAlign: 'center', marginBottom: 20, display: 'flex', gap: 10, justifyContent: 'center' }}>
                   <span className="cat-badge">{m.category?.name || 'Geral'}</span>
                   {m.court && <span className="cat-badge" style={{ background: 'rgba(255,255,255,0.05)', color: '#fff' }}>{m.court.name}</span>}
