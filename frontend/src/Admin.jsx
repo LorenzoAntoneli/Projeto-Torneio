@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from './supabase';
-import { Trophy, Swords, LayoutList, Users, LogOut, FileUp, Monitor, CheckCircle2 } from 'lucide-react';
+import { Trophy, Swords, LayoutList, Users, LogOut, FileUp, Monitor, CheckCircle2, PlusCircle, UserPlus, Gamepad2 } from 'lucide-react';
 
 export default function Admin() {
   const [session, setSession] = useState(localStorage.getItem('bt_session'));
@@ -55,31 +55,23 @@ export default function Admin() {
 
   const finishMatch = async (match, g1, g2) => {
     const winnerId = parseInt(g1) > parseInt(g2) ? match.pair1_id : match.pair2_id;
-    
-    // Tentativa de salvamento flexível
     const updateData = { 
         status: 'finished', 
         winner_id: winnerId || null,
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
+        pair1_games: parseInt(g1),
+        pair2_games: parseInt(g2)
     };
-
-    // Adiciona as colunas de games APENAS se elas existirem (baseado no log de colunas)
-    // Se o banco tiver nomes diferentes, o erro 400 vai nos dizer
-    updateData['pair1_games'] = parseInt(g1);
-    updateData['pair2_games'] = parseInt(g2);
-
     const { error } = await supabase.from('matches').update(updateData).eq('id', match.id);
-    
     if (error) {
       console.error('ERRO 400 - DETALHES:', error);
-      alert(`O BANCO REJEITOU: ${error.message}. Verifique se você rodou o comando SQL que te mandei!`);
+      alert(`O BANCO REJEITOU: ${error.message}. Rode o SQL de correção no Supabase!`);
     } else {
       alert('Resultado Finalizado com Sucesso!');
       loadData();
     }
   };
 
-  // Funções de criação simplificadas para debug
   const createTournament = async () => { await supabase.from('tournaments').insert([{ name: newTName }]); setNewTName(''); loadData(); };
   const createCategory = async () => { await supabase.from('categories').insert([{ tournament_id: selectedT, name: newCName }]); setNewCName(''); loadData(); };
   const createPair = async () => { await supabase.from('pairs').insert([{ category_id: selectedC, name: `${p1Name} / ${p2Name}` }]); setP1Name(''); setP2Name(''); loadData(); };
@@ -115,7 +107,7 @@ export default function Admin() {
                 <div key={m.id} className="glass-panel match-ctrl-card">
                   <div style={{display:'flex', alignItems:'center', gap:20, justifyContent:'center', marginTop:20}}>
                     <div style={{textAlign:'center',flex:1}}><div style={{fontWeight:'900', color:'#fff', height:'3rem'}}>{m.pair1?.name || '...'}</div><input id={`g1-${m.id}`} type="number" placeholder="0" style={{width:80, height:80, fontSize:'2.5rem', textAlign:'center', borderRadius:12}} /></div>
-                    <div style={{opacity:0.3, fontSize:'2rem'}}>X</div>
+                    <div style={{opacity:0.3, fontSize:'2rem', alignSelf:'center'}}>X</div>
                     <div style={{textAlign:'center',flex:1}}><div style={{fontWeight:'900', color:'#fff', height:'3rem'}}>{m.pair2?.name || '...'}</div><input id={`g2-${m.id}`} type="number" placeholder="0" style={{width:80, height:80, fontSize:'2.5rem', textAlign:'center', borderRadius:12}} /></div>
                   </div>
                   <button className="btn-primary" style={{width:'100%', marginTop:30, height:65}} onClick={() => {
@@ -123,9 +115,19 @@ export default function Admin() {
                      const g2Val = document.getElementById(`g2-${m.id}`).value;
                      if (g1Val === '' || g2Val === '') return alert('Preencha os dois lados!');
                      finishMatch(m, g1Val, g2Val);
-                  }}> FINALIZAR E ENVIAR PARA TV </button>
+                  }}> FINALIZAR E LANÇAR NA TV </button>
                 </div>
               ))}
+              {matches.filter(m => m.status === 'finished').length > 0 && <h3 style={{marginTop:40, color:'var(--accent-primary)', fontSize:'1rem'}}>Últimos Resultados</h3>}
+              <div style={{display:'grid', gap:10, marginTop:15}}>
+                {matches.filter(m => m.status === 'finished').slice(0, 10).map(m => (
+                  <div key={m.id} className="glass-panel" style={{padding:20, display:'flex', justifyContent:'space-between', borderRadius:12, opacity:0.6}}>
+                    <span style={{fontWeight:'900'}}>{m.pair1?.name} <span style={{color:'var(--accent-primary)', margin:'0 10px'}}>{m.pair1_games}</span></span>
+                    <span style={{opacity:0.2}}>X</span>
+                    <span style={{fontWeight:'900'}}><span style={{color:'var(--accent-primary)', margin:'0 10px'}}>{m.pair2_games}</span> {m.pair2?.name}</span>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         )}
@@ -139,7 +141,7 @@ export default function Admin() {
         {activeTab === 'pairs' && (
           <div className="admin-view-container" style={{maxWidth:700}}>
              <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, marginBottom:20}}><select value={selectedT} onChange={e => setSelectedT(e.target.value)}><option value="">Torneio...</option>{tournaments.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}</select><select value={selectedC} onChange={e => setSelectedC(e.target.value)}><option value="">Categoria...</option>{categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></div>
-             {selectedC && <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:10}}><input placeholder="Atleta 1" value={p1Name} onChange={e => setP1Name(e.target.value)} /><input placeholder="Atleta 2" value={p2Name} onChange={e => setP2Name(e.target.value)} /><button onClick={createPair} className="btn-primary" style={{gridColumn:'1 / span 2'}}>REGISTRAR</button></div>}
+             {selectedC && <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:10}}><input placeholder="Atleta 1" value={p1Name} onChange={e => setP1Name(e.target.value)} /><input placeholder="Atleta 2" value={p2Name} onChange={e => setP2Name(e.target.value)} /><button onClick={createPair} className="btn-primary" style={{gridColumn:'1 / span 2'}}>REGISTRAR DUPLA</button></div>}
           </div>
         )}
         {activeTab === 'matches' && (
