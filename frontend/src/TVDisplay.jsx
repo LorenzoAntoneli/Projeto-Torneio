@@ -128,9 +128,25 @@ export default function TVDisplay() {
            <div style={{display: 'grid', gap: 15}}>
              {lastResults.map(m => (
                <div key={m.id} className="glass-panel" style={{padding: 20, borderRadius: 20, opacity: 0.7}}>
-                  <div style={{fontSize: '0.6rem', color: 'var(--accent-primary)', fontWeight: 900, marginBottom: 8}}>{m.category_name}</div>
-                  <div style={{fontSize: '1rem', fontWeight: 900}}>{m.pair1_name} <b style={{color:'var(--accent-primary)'}}>{m.pair1_games}</b></div>
-                  <div style={{fontSize: '1rem', fontWeight: 900}}>{m.pair2_name} <b style={{color:'var(--accent-primary)'}}>{m.pair2_games}</b></div>
+                  <div style={{display:'flex', justifyContent:'space-between', fontSize: '0.6rem', color: 'var(--accent-primary)', fontWeight: 900, marginBottom: 12, textTransform:'uppercase', letterSpacing:2}}>
+                    <span>{m.category_name}</span>
+                    <span style={{opacity:0.5}}>{new Date(m.updated_at).toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'})}</span>
+                  </div>
+                  <div style={{display:'flex', flexDirection:'column', gap:8}}>
+                    <div style={{display:'flex', justifyContent:'space-between', alignItems:'center'}}>
+                      <span style={{fontSize: '1rem', fontWeight: m.winner_id === m.pair1_id ? 900 : 400, color: m.winner_id === m.pair1_id ? '#fff' : '#888'}}>{m.pair1_name}</span>
+                      <span style={{fontSize: '1.2rem', fontWeight: 900, color:'var(--accent-primary)'}}>{m.pair1_games}</span>
+                    </div>
+                    <div style={{display:'flex', justifyContent:'space-between', alignItems:'center'}}>
+                      <span style={{fontSize: '1rem', fontWeight: m.winner_id === m.pair2_id ? 900 : 400, color: m.winner_id === m.pair2_id ? '#fff' : '#888'}}>{m.pair2_name}</span>
+                      <span style={{fontSize: '1.2rem', fontWeight: 900, color:'var(--accent-primary)'}}>{m.pair2_games}</span>
+                    </div>
+                  </div>
+                  {(m.pair1_tiebreak || m.pair2_tiebreak) && (
+                    <div style={{fontSize: '0.7rem', opacity: 0.3, textAlign: 'center', marginTop: 8, borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: 5}}>
+                      Tie-break: {m.pair1_tiebreak} - {m.pair2_tiebreak}
+                    </div>
+                  )}
                </div>
              ))}
            </div>
