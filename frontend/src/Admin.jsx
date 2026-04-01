@@ -22,22 +22,17 @@ export default function Admin() {
   const [matchP1, setMatchP1] = useState('');
   const [matchP2, setMatchP2] = useState('');
 
-  // FUNÇÃO INFALÍVEL: Busca tudo separado e junta no Javascript
   const loadData = async () => {
     try {
-      // 1. Buscar tabelas base
       const { data: tData } = await supabase.from('tournaments').select('*').order('created_at', { ascending: false });
       const { data: cData } = await supabase.from('categories').select('*');
       const { data: pData } = await supabase.from('pairs').select('*');
       const { data: mData } = await supabase.from('matches').select('*').order('updated_at', { ascending: false });
 
       setTournaments(tData || []);
-      
-      // 2. Criar mapas para acesso rápido (evita erro 400)
       const catMap = {}; (cData || []).forEach(c => catMap[c.id] = c);
       const pairMap = {}; (pData || []).forEach(p => pairMap[p.id] = p);
 
-      // 3. Juntar os dados manualmente
       const formatted = (mData || []).map(m => ({
         ...m,
         pair1: pairMap[m.pair1_id],
@@ -48,10 +43,7 @@ export default function Admin() {
       setMatches(formatted);
       if (selectedT) setCategories((cData || []).filter(c => c.tournament_id === selectedT));
       if (selectedC) setPairs((pData || []).filter(p => p.category_id === selectedC));
-
-    } catch(e) {
-      console.error('Falha crítica no carregamento:', e);
-    }
+    } catch(e) { console.error('Erro ao carregar:', e); }
   };
 
   useEffect(() => { if (session) loadData(); }, [session, selectedT, selectedC]);
@@ -74,14 +66,31 @@ export default function Admin() {
       pair2_games: 0, 
       status: 'pending' 
     }]); 
-    if (error) alert('Erro ao criar: ' + error.message); 
-    else { alert('Sucesso!'); loadData(); setActiveTab('scoreboard'); }
+    if (error) alert('Erro: ' + error.message); else { alert('Sucesso!'); loadData(); setActiveTab('scoreboard'); }
   };
 
   const finishMatch = async (match, g1, g2) => {
-    const vId = parseInt(g1) > parseInt(g2) ? match.pair1_id : match.pair2_id;
-    await supabase.from('matches').update({ pair1_games: parseInt(g1), pair2_games: parseInt(g2), status: 'finished', winner_id: vId, updated_at: new Date() }).eq('id', match.id);
-    loadData();
+    // Pegar o ID do vencedor com check de segurança
+    const winnerId = parseInt(g1) > parseInt(g2) ? match.pair1_id : match.pair2_id;
+    
+    // Dados para atualizar (Payload limpo)
+    const updateData = { 
+        pair1_games: parseInt(g1), 
+        pair2_games: parseInt(g2), 
+        status: 'finished', 
+        winner_id: winnerId || null,
+        updated_at: new Date().toISOString() // ISOString é o formato seguro para Postgres
+    };
+
+    const { error } = await supabase.from('matches').update(updateData).eq('id', match.id);
+    
+    if (error) {
+      console.error('ERRO DETALHADO SUPABASE:', error);
+      alert(`ERRO AO FINALIZAR (400): ${error.message} - Verifique o console do navegador no F12 para detalhes.`);
+    } else {
+      alert('Resultado Finalizado com Sucesso!');
+      loadData();
+    }
   };
 
   if (!session) return (
@@ -108,35 +117,39 @@ export default function Admin() {
       <main className="admin-main">
         {activeTab === 'scoreboard' && (
           <div className="admin-view-container">
-            <h2 className="view-title">Resultados Pendentes</h2>
+            <h2 className="view-title">Digitar Resultado Final</h2>
             <div className="matches-list">
               {matches.filter(m => m.status !== 'finished').map(m => (
                 <div key={m.id} className="glass-panel match-ctrl-card">
-                  <div className="card-header"><span className="cat-badge">{m.category?.name || 'Geral'}</span></div>
+                  <div className="card-header"><span className="cat-badge">{m.category?.name || 'Iniciante'}</span></div>
                   <div style={{display:'flex', alignItems:'center', gap:20, justifyContent:'center', marginTop:20}}>
-                    <div style={{textAlign:'center',flex:1}}><div style={{fontWeight:'900', color:'#fff'}}>{m.pair1?.name || '...'}</div><input id={`g1-${m.id}`} type="number" placeholder="0" style={{width:80, height:80, fontSize:'2rem', textAlign:'center'}} /></div>
-                    <div style={{opacity:0.3}}>X</div>
-                    <div style={{textAlign:'center',flex:1}}><div style={{fontWeight:'900', color:'#fff'}}>{m.pair2?.name || '...'}</div><input id={`g2-${m.id}`} type="number" placeholder="0" style={{width:80, height:80, fontSize:'2rem', textAlign:'center'}} /></div>
+                    <div style={{textAlign:'center',flex:1}}><div style={{fontWeight:'900', color:'#fff', marginBottom:15}}>{m.pair1?.name || 'Dupla 1'}</div><input id={`g1-${m.id}`} type="number" placeholder="0" style={{width:80, height:80, fontSize:'2.5rem', textAlign:'center', borderRadius:12}} /></div>
+                    <div style={{opacity:0.3, fontSize:'2rem'}}>X</div>
+                    <div style={{textAlign:'center',flex:1}}><div style={{fontWeight:'900', color:'#fff', marginBottom:15}}>{m.pair2?.name || 'Dupla 2'}</div><input id={`g2-${m.id}`} type="number" placeholder="0" style={{width:80, height:80, fontSize:'2.5rem', textAlign:'center', borderRadius:12}} /></div>
                   </div>
-                  <button className="btn-primary" style={{width:'100%', marginTop:30, height:60}} onClick={() => {
-                     const g1 = document.getElementById(`g1-${m.id}`).value;
-                     const g2 = document.getElementById(`g2-${m.id}`).value;
-                     if (g1 === '' || g2 === '') return alert('Preencha os dois!');
-                     finishMatch(m, g1, g2);
-                  }}> FINALIZAR NA TV </button>
+                  <button className="btn-primary" style={{width:'100%', marginTop:30, height:65}} onClick={() => {
+                     const g1Val = document.getElementById(`g1-${m.id}`).value;
+                     const g2Val = document.getElementById(`g2-${m.id}`).value;
+                     if (g1Val === '' || g2Val === '') return alert('Por favor, informe o placar dos dois lados!');
+                     finishMatch(m, g1Val, g2Val);
+                  }}> FINALIZAR E ENVIAR PARA TV </button>
                 </div>
               ))}
-              {matches.filter(m => m.status === 'finished').length > 0 && <h3 style={{marginTop:40, color:'var(--accent-primary)'}}>Últimos Resultados</h3>}
-              {matches.filter(m => m.status === 'finished').slice(0, 5).map(m => (
-                 <div key={m.id} className="glass-panel" style={{padding:15, marginBottom:10, display:'flex', justifyContent:'space-between', opacity:0.6}}>
-                    <span>{m.pair1?.name} <b>{m.pair1_games}</b> x <b>{m.pair2_games}</b> {m.pair2?.name}</span>
-                    <span style={{color:'var(--accent-success)', fontSize:'0.7rem'}}>FINALIZADO</span>
-                 </div>
-              ))}
+              {matches.filter(m => m.status === 'finished').length > 0 && <h3 style={{marginTop:40, color:'var(--accent-primary)', fontSize:'1rem'}}>RESULTADOS RECENTES</h3>}
+              <div style={{display:'grid', gap:10, marginTop:15}}>
+                {matches.filter(m => m.status === 'finished').slice(0, 10).map(m => (
+                  <div key={m.id} className="glass-panel" style={{padding:20, display:'flex', justifyContent:'space-between', borderRadius:12, opacity:0.8}}>
+                    <span style={{fontWeight:'900'}}>{m.pair1?.name} <span style={{color:'var(--accent-primary)', margin:'0 10px'}}>{m.pair1_games}</span></span>
+                    <span style={{opacity:0.2}}>X</span>
+                    <span style={{fontWeight:'900'}}><span style={{color:'var(--accent-primary)', margin:'0 10px'}}>{m.pair2_games}</span> {m.pair2?.name}</span>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         )}
 
+        {/* ... Restante do código das abas (Setup, Pairs, Matches) continua igual ao Flat Fetch strategy ... */}
         {activeTab === 'setup' && (
           <div className="admin-view-container" style={{maxWidth:700}}>
              <input style={{width:'100%', marginBottom:15}} value={newTName} onChange={e => setNewTName(e.target.value)} placeholder="Novo Torneio" />
@@ -147,7 +160,6 @@ export default function Admin() {
              </div>}
           </div>
         )}
-
         {activeTab === 'pairs' && (
           <div className="admin-view-container" style={{maxWidth:700}}>
              <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, marginBottom:20}}>
@@ -157,7 +169,6 @@ export default function Admin() {
              {selectedC && <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:10}}><input placeholder="Atleta 1" value={p1Name} onChange={e => setP1Name(e.target.value)} /><input placeholder="Atleta 2" value={p2Name} onChange={e => setP2Name(e.target.value)} /><button onClick={createPair} className="btn-primary" style={{gridColumn:'1 / span 2'}}>REGISTRAR DUPLA</button></div>}
           </div>
         )}
-
         {activeTab === 'matches' && (
           <div className="admin-view-container" style={{maxWidth:700}}>
              <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, marginBottom:20}}>
@@ -170,7 +181,7 @@ export default function Admin() {
                    <div style={{fontWeight:'900', color:'var(--accent-primary)'}}>X</div>
                    <select style={{flex:1}} value={matchP2} onChange={e => setMatchP2(e.target.value)}><option value="">Dupla Beta</option>{pairs.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}</select>
                 </div>
-                <button onClick={createMatch} className="btn-primary" style={{width:'100%'}}>AGENDAR JOGO AGORA</button>
+                <button onClick={createMatch} className="btn-primary" style={{width:'100%'}}>GERAR PARTIDA AGORA</button>
              </div>}
           </div>
         )}
