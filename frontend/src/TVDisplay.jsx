@@ -133,7 +133,9 @@ export default function TVDisplay() {
 
         if (elevenKey) {
           try {
-            const voiceId = 'z9fAnlkS93p57zGZ43C2'; // Glinda (Voz Premade - Garantida para todas as contas)
+            // Voice ID atualizado para 'Rachel' (Estável e Profissional)
+            // Outras opções: 'pNIn79O7S7GWmkh8p3DG' (Adam), 'EXAVITQu4vr4xnSDxMaL' (Bella)
+            const voiceId = '21m00Tcm4TlvDq8ikWAM'; 
             const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
               method: 'POST',
               headers: { 
@@ -151,18 +153,33 @@ export default function TVDisplay() {
               const blob = await response.blob();
               const audioUrl = URL.createObjectURL(blob);
               const audio = new Audio(audioUrl);
+              audio.onended = () => URL.revokeObjectURL(audioUrl); // Limpeza de memória
               audio.play().catch(e => console.error('Erro play ElevenLabs:', e));
             } else {
-              console.error('Erro na API ElevenLabs:', response.status);
-              // Fallback se a cota acabar
-              const gUrl = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(speechText)}&tl=pt-br&client=tw-ob`;
-              new Audio(gUrl).play();
+              const errorData = await response.json().catch(() => ({}));
+              console.error('Erro ElevenLabs:', response.status, errorData);
+              
+              // Fallback 1: Google TTS
+              try {
+                const gUrl = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(speechText)}&tl=pt-br&client=tw-ob`;
+                const gAudio = new Audio(gUrl);
+                gAudio.play().catch(() => {
+                  // Fallback 2: Voz Nativa do Navegador (Fim da linha)
+                  const utterance = new SpeechSynthesisUtterance(speechText);
+                  utterance.lang = 'pt-BR';
+                  window.speechSynthesis.speak(utterance);
+                });
+              } catch (e) {
+                const utterance = new SpeechSynthesisUtterance(speechText);
+                utterance.lang = 'pt-BR';
+                window.speechSynthesis.speak(utterance);
+              }
             }
           } catch (e) {
             console.error('Erro de conexão ElevenLabs:', e);
-            // Fallback para Google em erro de rede
-            const gUrl = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(speechText)}&tl=pt-br&client=tw-ob`;
-            new Audio(gUrl).play();
+            const utterance = new SpeechSynthesisUtterance(speechText);
+            utterance.lang = 'pt-BR';
+            window.speechSynthesis.speak(utterance);
           }
         } else {
           // Fallback para Google se não houver chave
