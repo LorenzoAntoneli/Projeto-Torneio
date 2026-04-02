@@ -164,7 +164,7 @@ export default function Admin() {
       <main className="content-area">
         {/* LOGO MOBILE */}
         <div className="mobile-admin-logo">
-          <img src={logo} alt="Logo" style={{ width: 140, height: 'auto' }} />
+          <img src={logo} alt="Logo" style={{ width: 120, height: 'auto' }} />
         </div>
 
         {activeTab === 'scoreboard' && (

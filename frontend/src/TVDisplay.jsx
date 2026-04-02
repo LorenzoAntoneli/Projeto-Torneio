@@ -127,7 +127,7 @@ export default function TVDisplay() {
       {/* HEADER FIXO */}
       <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 60, borderBottom: '1px solid rgba(212,175,55,0.2)', paddingBottom: 30, background: '#000' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 30 }}>
-          <img src={logo} alt="Careca's Logo" style={{ height: 130, objectFit: 'contain' }} />
+          <img src={logo} alt="Careca's Logo" style={{ height: 200, objectFit: 'contain' }} />
           <div>
             <h1 style={{ fontSize: '3.5rem', fontWeight: 950, color: 'var(--accent-primary)', textTransform: 'uppercase', margin: 0 }}>Careca’s Beach Club</h1>
             <div style={{ display: 'flex', gap: 15, alignItems: 'center', marginTop: 10 }}>
