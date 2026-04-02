@@ -140,7 +140,7 @@ export default function Admin() {
       {/* SIDEBAR (Desktop Only) */}
       <aside className="sidebar">
         <div className="sidebar-logo" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '20px 0', justifyContent: 'center' }}>
-          <img src={logo} alt="Logo" style={{ width: 100, height: 'auto' }} />
+          <img src={logo} alt="Logo" style={{ width: 200, height: 'auto' }} />
         </div>
         <nav className="nav-group">
           <div className={`nav-item ${activeTab === 'scoreboard' ? 'active' : ''}`} onClick={() => setActiveTab('scoreboard')}><Swords size={20} /> Score (Ativos)</div>
@@ -164,7 +164,7 @@ export default function Admin() {
       <main className="content-area">
         {/* LOGO MOBILE */}
         <div className="mobile-admin-logo">
-          <img src={logo} alt="Logo" />
+          <img src={logo} alt="Logo" style={{ width: 200, height: 'auto' }} />
         </div>
 
         {activeTab === 'scoreboard' && (
