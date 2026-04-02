@@ -185,23 +185,21 @@ export default function TVDisplay() {
     .sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
 
   return (
-    <div className="tv-container" style={{ background: '#000', minHeight: '100vh', color: '#fff', padding: '40px', position: 'relative', fontFamily: 'system-ui, sans-serif' }}>
+    <div className="tv-container" style={{ background: '#000', minHeight: '100vh', color: '#fff', padding: '40px', paddingBottom: '280px', position: 'relative', fontFamily: 'system-ui, sans-serif' }}>
 
-      {/* HEADER FIXO */}
-      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 60, borderBottom: '1px solid rgba(212,175,55,0.2)', paddingBottom: 30, background: '#000' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 30 }}>
-          <img src={logo} alt="Careca's Logo" style={{ height: 200, objectFit: 'contain' }} />
-          <div>
-            <h1 style={{ fontSize: '3.5rem', fontWeight: 950, color: 'var(--accent-primary)', textTransform: 'uppercase', margin: 0 }}>Careca’s Beach Club</h1>
-            <div style={{ display: 'flex', gap: 15, alignItems: 'center', marginTop: 10 }}>
-              <span style={{ letterSpacing: 8, opacity: 0.5, fontSize: '0.8rem' }}>Torneio em Tempo Real</span>
-              <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#2ecc71', boxShadow: '0 0 10px #2ecc71' }}></div>
-              <span style={{ fontSize: '0.6rem', opacity: 0.3, textTransform: 'uppercase' }}>{currentSlide === 0 ? "Geral" : currentSlide === 1 ? "Próximas" : currentSlide === 2 ? "Resultados" : "Patrocinadores"}</span>
-            </div>
-          </div>
+      {/* HEADER PREMIUM (FOCO MÁXIMO NA LOGO) */}
+      <header style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: 100, paddingBottom: 60, borderBottom: '2px solid rgba(212,175,55,0.1)', background: '#000' }}>
+        <img src={logo} alt="Careca's Logo" style={{ height: 450, objectFit: 'contain', filter: 'drop-shadow(0 0 30px rgba(212,175,55,0.2))' }} />
+        
+        <div style={{ position: 'absolute', top: 20, right: 40, textAlign: 'right' }}>
+          <div style={{ fontSize: '3.5rem', fontWeight: 900, color: 'var(--accent-primary)', letterSpacing: 2 }}>{currentTime}</div>
         </div>
-        <div style={{ textAlign: 'right' }}>
-          <div style={{ fontSize: '3rem', fontWeight: 900, color: '#fff' }}>{currentTime}</div>
+
+        <div style={{ display: 'flex', gap: 20, alignItems: 'center', marginTop: 30 }}>
+          <div style={{ width: 12, height: 12, borderRadius: '50%', background: '#2ecc71', boxShadow: '0 0 15px #2ecc71' }}></div>
+          <span style={{ letterSpacing: 10, fontSize: '1.2rem', opacity: 0.5, fontWeight: 900, textTransform: 'uppercase' }}>
+            AO VIVO - {currentSlide === 0 ? "Painel Geral" : currentSlide === 1 ? "Próximas Partidas" : currentSlide === 2 ? "Resultados" : "Patrocinadores"}
+          </span>
         </div>
       </header>
 
@@ -348,11 +346,12 @@ export default function TVDisplay() {
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
         
-        .ticker-wrap { position: fixed; bottom: 0; left: 0; width: 100%; height: 120px; background: #000; border-top: 2px solid var(--accent-primary); z-index: 1000; overflow: hidden; display: flex; align-items: center; }
+        .ticker-wrap { position: fixed; bottom: 0; left: 0; width: 100%; height: 220px; background: #000; border-top: 3px solid var(--accent-primary); z-index: 1000; overflow: hidden; display: flex; flex-direction: column; justify-content: center; padding: 20px 0; }
+        .ticker-label { color: var(--accent-primary); font-size: 1.2rem; font-weight: 900; letter-spacing: 5px; text-transform: uppercase; margin-bottom: 20px; opacity: 0.8; }
         .ticker { display: flex; white-space: nowrap; animation: scroll-ticker 30s linear infinite; }
-        .ticker-item { display: flex; align-items: center; gap: 15px; margin-right: 80px; }
-        .ticker-item img { height: 60px; width: auto; object-fit: contain; filter: grayscale(0.2) brightness(1.2); }
-        .ticker-item span { color: #fff; font-size: 1.2rem; font-weight: 900; letter-spacing: 2px; text-transform: uppercase; opacity: 0.8; }
+        .ticker-item { display: flex; align-items: center; gap: 20px; margin-right: 120px; }
+        .ticker-item img { height: 100px; width: auto; object-fit: contain; filter: drop-shadow(0 0 10px rgba(255,255,255,0.1)); }
+        .ticker-item span { color: #fff; font-size: 1.5rem; font-weight: 900; letter-spacing: 2px; text-transform: uppercase; opacity: 0.8; }
         
         @keyframes scroll-ticker {
           0% { transform: translateX(0); }
@@ -360,12 +359,13 @@ export default function TVDisplay() {
         }
       `}</style>
 
-      {/* RODAPÉ DE PATROCINADORES (TICKER) */}
+      {/* RODAPÉ DE PATROCINADORES (TICKER SEGURO) */}
       {sponsors.length > 0 && (
         <div className="ticker-wrap">
+          <div className="ticker-label">Patrocinadores:</div>
           <div className="ticker">
             {/* Duplicamos a lista para o efeito infinito suave */}
-            {[...sponsors, ...sponsors, ...sponsors].map((s, idx) => (
+            {[...sponsors, ...sponsors, ...sponsors, ...sponsors].map((s, idx) => (
               <div key={`${s.id}-${idx}`} className="ticker-item">
                 <img src={s.logo_url} alt={s.name} />
                 <span>{s.name}</span>
