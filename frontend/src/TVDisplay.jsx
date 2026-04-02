@@ -118,12 +118,13 @@ export default function TVDisplay() {
         const cat = match.category_name || 'Geral';
         const court = match.court_name;
 
-        // Frase equilibrada
-        const phrase = `Atenção... Partida pela categoria ${cat}... Dupla um: ${p1}. Contra. Dupla dois: ${p2}... Favor, dirigir-se à ${court}.`;
+        // Frase com pausas dramáticas (vírgulas e pontos) para maior clareza no clube
+        const phrase = `Atenção para o próximo jogo!... Categoria: ${cat}!... ${p1}... enfrenta... ${p2}!... Favor dirigir-se agora para a ${court}. Repetindo... ${p1}... e... ${p2}... na ${court}.`;
 
         // Se tivermos a chave do VoiceRSS, usamos a voz de nuvem (Compatível com tudo)
         if (voiceKey) {
-          const url = `https://api.voicerss.org/?key=${voiceKey}&hl=pt-br&v=Bia&src=${encodeURIComponent(phrase)}&f=44khz_16bit_stereo`;
+          // Alterado para voz 'Camila' e rate 'r=-1' (mais lento)
+          const url = `https://api.voicerss.org/?key=${voiceKey}&hl=pt-br&v=Camila&r=-1&src=${encodeURIComponent(phrase)}&f=44khz_16bit_stereo`;
           const audio = new Audio(url);
           audio.play().catch(e => console.error('Erro play VoiceRSS:', e));
         } else {
