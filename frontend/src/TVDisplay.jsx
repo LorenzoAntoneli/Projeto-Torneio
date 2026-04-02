@@ -61,12 +61,19 @@ export default function TVDisplay() {
       else loadMatches();
     }).subscribe();
 
-    // Ciclo de Slides (3 minutos = 180000ms)
+    // Ciclo de Slides (1 minuto = 60000ms)
     const slideTimer = setInterval(() => {
       setCurrentSlide(prev => (prev + 1) % 3);
-    }, 180000);
+    }, 60000);
 
     return () => { clearInterval(timer); clearInterval(slideTimer); supabase.removeChannel(ch); };
+  }, []);
+  
+  // Pré-carregar vozes do sistema (necessário em alguns navegadores)
+  useEffect(() => {
+    const loadVoices = () => { window.speechSynthesis.getVoices(); };
+    window.speechSynthesis.onvoiceschanged = loadVoices;
+    loadVoices();
   }, []);
 
   // Chamada de Voz (TTS) com aviso sonoro inicial
@@ -103,27 +110,25 @@ export default function TVDisplay() {
         utterance.rate = 0.95;  // Ligeiramente mais lento para clareza
         utterance.pitch = 1.1;  // Ajustado para um tom mais feminino e menos robótico
         
-        // Prioridade de vozes FEMININAS (Vozes Naturais conhecidas)
         const voices = synth.getVoices();
-        const bestVoices = [
-            'Microsoft Francisca Online',
-            'Google português do Brasil',
-            'Microsoft Maria Online',
-            'Microsoft Heloisa Online',
-            'Luciana', 
-            'Maria',
-            'Heloisa',
-            'Vitoria'
+        const femaleVoiceNames = [
+            'Francisca', 'Maria', 'Heloisa', 'Luciana', 'Vitoria', 'Joana', 'Google', 'Female', 'Online'
         ];
+        const maleVoiceNames = ['Daniel', 'Antonio', 'Ricardo', 'Helder', 'Male', 'Guy'];
         
-        // Tenta encontrar a melhor voz disponível no sistema do usuário
+        // 1. Tenta a lista de preferência (Nomes femininos específicos)
         let selectedVoice = null;
-        for (const name of bestVoices) {
+        for (const name of femaleVoiceNames) {
             selectedVoice = voices.find(v => v.name.includes(name) && v.lang.includes('pt-BR'));
             if (selectedVoice) break;
         }
         
-        // Fallback para qualquer voz pt-BR se nenhuma das preferidas for encontrada
+        // 2. Se não achou específica, tenta qualquer uma pt-BR que NÃO seja masculina (filtro rigoroso)
+        if (!selectedVoice) {
+            selectedVoice = voices.find(v => v.lang.includes('pt-BR') && !maleVoiceNames.some(m => v.name.toLowerCase().includes(m.toLowerCase())));
+        }
+        
+        // 3. Fallback final (qualquer pt-BR)
         if (!selectedVoice) selectedVoice = voices.find(v => v.lang.includes('pt-BR'));
         
         if (selectedVoice) utterance.voice = selectedVoice;
@@ -143,7 +148,8 @@ export default function TVDisplay() {
       setCallingMatch(nextMatch);
       setCalledIds(prev => new Set(prev).add(nextMatch.id));
       if (audioEnabled) playVoiceAnnouncement(nextMatch);
-      setTimeout(() => setCallingMatch(null), 15000);
+      // Duração aumentada para sincronizar com a fala da voz (30 segundos)
+      setTimeout(() => setCallingMatch(null), 30000);
     }
   }, [currentTime, matches, calledIds, callingMatch, audioEnabled]);
 
