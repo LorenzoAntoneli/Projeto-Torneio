@@ -121,18 +121,18 @@ export default function TVDisplay() {
         // Frase com pausas dramáticas (vírgulas e pontos) para maior clareza no clube
         const phrase = `Atenção para o próximo jogo!... Categoria: ${cat}!... ${p1}... enfrenta... ${p2}!... Favor dirigir-se agora para a ${court}. Repetindo... ${p1}... e... ${p2}... na ${court}.`;
 
-        // Se tivermos a chave do VoiceRSS, usamos a voz de nuvem (Compatível com tudo)
-        if (voiceKey) {
-          // Alterado para voz 'Camila' e rate 'r=-1' (mais lento)
-          const url = `https://api.voicerss.org/?key=${voiceKey}&hl=pt-br&v=Camila&r=-1&src=${encodeURIComponent(phrase)}&f=44khz_16bit_stereo`;
-          const audio = new Audio(url);
-          audio.play().catch(e => console.error('Erro play VoiceRSS:', e));
-        } else {
-          // Fallback para voz local se não houver chave (apenas para emergência)
+        // IA Google (Limpando pontuação excessiva para não confundir o motor de tradução)
+        const gPhrase = phrase.replace(/\.\.\./g, '. ').replace(/!/g, '. ');
+        const url = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(gPhrase)}&tl=pt-br&client=tw-ob`;
+        
+        const audio = new Audio(url);
+        audio.play().catch(e => {
+          console.error('Erro play Google Voice:', e);
+          // Fallback final: voz local do navegador se o Google falhar
           const utterance = new SpeechSynthesisUtterance(phrase);
           utterance.lang = 'pt-BR';
           window.speechSynthesis.speak(utterance);
-        }
+        });
       }, 1000);
 
     } catch (e) { console.error('Erro áudio/voz:', e); }
