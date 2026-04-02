@@ -69,39 +69,41 @@ export default function TVDisplay() {
     return () => { clearInterval(timer); clearInterval(slideTimer); supabase.removeChannel(ch); };
   }, []);
 
-  // Som de Notificação Sintetizado (Novo Sinal de Torneio - Repetitivo)
-  const playChime = () => {
+  // Chamada de Voz (TTS) com aviso sonoro inicial
+  const playVoiceAnnouncement = (match) => {
     try {
       const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-
-      const playSequence = () => {
-        const playNote = (freq, startTime, duration, vol) => {
-          const osc = audioCtx.createOscillator();
-          const gain = audioCtx.createGain();
-          osc.type = 'sine';
-          osc.frequency.setValueAtTime(freq, startTime);
-          gain.gain.setValueAtTime(vol, startTime);
-          gain.gain.exponentialRampToValueAtTime(0.0001, startTime + duration);
-          osc.connect(gain);
-          gain.connect(audioCtx.destination);
-          osc.start(startTime);
-          osc.stop(startTime + duration);
-        };
-
-        // Triade descendente profissional (Volume 0.3 - Potente)
-        playNote(659.25, audioCtx.currentTime, 0.5, 0.4);      // Mi (E5)
-        playNote(523.25, audioCtx.currentTime + 0.2, 0.5, 0.4); // Dó (C5)
-        playNote(392.00, audioCtx.currentTime + 0.4, 0.8, 0.4); // Sol (G4)
+      
+      // 1. Sinal sonoro curto (Ding-Dong)
+      const playNote = (freq, startTime, duration) => {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.frequency.setValueAtTime(freq, startTime);
+        gain.gain.setValueAtTime(0.3, startTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, startTime + duration);
+        osc.connect(gain); gain.connect(audioCtx.destination);
+        osc.start(startTime); osc.stop(startTime + duration);
       };
+      playNote(523.25, audioCtx.currentTime, 0.5); // Dó
+      playNote(659.25, audioCtx.currentTime + 0.15, 0.5); // Mi
 
-      // Tocar a sequência imediatamente
-      playSequence();
+      // 2. Anúncio da Dupla
+      setTimeout(() => {
+        const synth = window.speechSynthesis;
+        const p1 = match.pair1_name.replace('/', ' e ');
+        const p2 = match.pair2_name.replace('/', ' e ');
+        const court = match.court_name;
 
-      // Repetir a cada 3.5 segundos durante os 15 segundos da animação
-      const interval = setInterval(playSequence, 3500);
-      setTimeout(() => clearInterval(interval), 14000); // Para um pouco antes de sumir a tela
+        const phrase = `Atenção no Careca's Club. Dupla 1: ${p1}. Dupla 2: ${p2}. Favor se dirigir à ${court}.`;
+        
+        const utterance = new SpeechSynthesisUtterance(phrase);
+        utterance.lang = 'pt-BR';
+        utterance.rate = 0.9;
+        utterance.pitch = 1.0;
+        synth.speak(utterance);
+      }, 800);
 
-    } catch (e) { console.log('Erro áudio:', e); }
+    } catch (e) { console.error('Erro áudio/voz:', e); }
   };
 
   useEffect(() => {
@@ -110,7 +112,7 @@ export default function TVDisplay() {
       const nextMatch = toCallList[0];
       setCallingMatch(nextMatch);
       setCalledIds(prev => new Set(prev).add(nextMatch.id));
-      if (audioEnabled) playChime();
+      if (audioEnabled) playVoiceAnnouncement(nextMatch);
       setTimeout(() => setCallingMatch(null), 15000);
     }
   }, [currentTime, matches, calledIds, callingMatch, audioEnabled]);
@@ -258,10 +260,10 @@ export default function TVDisplay() {
         <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: '#000', zIndex: 100000, display: 'flex', justifyContent: 'center', alignItems: 'center', flexDirection: 'column', backdropFilter: 'blur(30px)' }}>
           <Trophy size={100} color="var(--accent-primary)" style={{ marginBottom: 30 }} />
           <h2 style={{ color: '#fff', fontSize: '2rem', marginBottom: 40, letterSpacing: 5, fontWeight: 900 }}>CARECA’S BEACH CLUB</h2>
-          <button className="btn-primary" style={{ padding: '35px 70px', fontSize: '1.8rem', fontWeight: 950, borderRadius: 100, display: 'flex', alignItems: 'center', gap: 20, boxShadow: '0 20px 50px rgba(212,175,55,0.3)' }} onClick={() => { setAudioEnabled(true); playChime(); }}>
+          <button className="btn-primary" style={{ padding: '35px 70px', fontSize: '1.8rem', fontWeight: 950, borderRadius: 100, display: 'flex', alignItems: 'center', gap: 20, boxShadow: '0 20px 50px rgba(212,175,55,0.3)' }} onClick={() => { setAudioEnabled(true); playVoiceAnnouncement({pair1_name: 'Dupla / Demonstração', pair2_name: 'Voz / Ativada', court_name: 'Quadra Central'}); }}>
             <Star size={35} fill="currentColor" /> INICIAR PAINEL DA TV
           </button>
-          <p style={{ marginTop: 30, opacity: 0.4, fontSize: '0.9rem', letterSpacing: 2 }}>Clique para ativar o sinal sonoro das quadras.</p>
+          <p style={{ marginTop: 30, opacity: 0.4, fontSize: '0.9rem', letterSpacing: 2 }}>Clique para ativar a chamada de voz e sinal sonoro das quadras.</p>
         </div>
       )}
 
