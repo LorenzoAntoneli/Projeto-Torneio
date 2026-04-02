@@ -288,7 +288,7 @@ export default function TVDisplay() {
         <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: '#000', zIndex: 100000, display: 'flex', justifyContent: 'center', alignItems: 'center', flexDirection: 'column', backdropFilter: 'blur(30px)' }}>
           <Trophy size={100} color="var(--accent-primary)" style={{ marginBottom: 30 }} />
           <h2 style={{ color: '#fff', fontSize: '2rem', marginBottom: 40, letterSpacing: 5, fontWeight: 900 }}>CARECA’S BEACH CLUB</h2>
-          <button className="btn-primary" style={{ padding: '35px 70px', fontSize: '1.8rem', fontWeight: 950, borderRadius: 100, display: 'flex', alignItems: 'center', gap: 20, boxShadow: '0 20px 50px rgba(212,175,55,0.3)' }} onClick={() => { setAudioEnabled(true); playVoiceAnnouncement({pair1_name: 'Dupla / Demonstração', pair2_name: 'Voz / Ativada', category_name: 'Masculino A', court_name: 'Quadra Central'}); }}>
+          <button className="btn-primary" style={{ padding: '35px 70px', fontSize: '1.8rem', fontWeight: 950, borderRadius: 100, display: 'flex', alignItems: 'center', gap: 20, boxShadow: '0 20px 50px rgba(212,175,55,0.3)' }} onClick={() => setAudioEnabled(true)}>
             <Star size={35} fill="currentColor" /> INICIAR PAINEL DA TV
           </button>
           <p style={{ marginTop: 30, opacity: 0.4, fontSize: '0.9rem', letterSpacing: 2 }}>Clique para ativar a chamada de voz e sinal sonoro das quadras.</p>
