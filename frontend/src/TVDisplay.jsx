@@ -143,8 +143,9 @@ export default function TVDisplay() {
             const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
               method: 'POST',
               headers: { 
-                'xi-api-key': finalKey,
-                'Content-Type': 'application/json'
+                'Accept': 'audio/mpeg',
+                'Content-Type': 'application/json',
+                'xi-api-key': finalKey
               },
               body: JSON.stringify({
                 text: speechText,
