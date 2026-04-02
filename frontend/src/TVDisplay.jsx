@@ -138,7 +138,7 @@ export default function TVDisplay() {
             // Outras opções: 'pNIn79O7S7GWmkh8p3DG' (Adam), 'EXAVITQu4vr4xnSDxMaL' (Bella)
             // Voz da Rachel (Brasileira/Multilingual) e modelo v2 estável
             const voiceId = '21m00Tcm4TlvDq8ikWAM'; 
-            const finalKey = elevenKey.trim() || 'sk_5d5169133c0b408c2c108e9f9818f316623d3fe1db242bfc';
+            const finalKey = elevenKey.trim() || 'sk_403196c95ce0c62fec7cf85d72eb77dc05becd3b4565fce4';
             
             const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
               method: 'POST',
