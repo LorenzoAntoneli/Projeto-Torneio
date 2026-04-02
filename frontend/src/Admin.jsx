@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from './supabase';
-import { Swords, LogOut, Monitor, PlusCircle, UserPlus, Gamepad2, Settings, MapPin, LayoutList, Trash2, Pencil } from 'lucide-react';
+import { Swords, LogOut, Monitor, PlusCircle, UserPlus, Gamepad2, Settings, MapPin, LayoutList, Trash2, Pencil, Volume2 } from 'lucide-react';
 import logo from './assets/logo.jpg';
 
 export default function Admin() {
@@ -30,6 +30,7 @@ export default function Admin() {
   const [matchCourt, setMatchCourt] = useState('');
   const [matchTime, setMatchTime] = useState('');
   const [elevenKey, setElevenKey] = useState(import.meta.env.VITE_ELEVENLABS_KEY || '');
+  const [voiceKey, setVoiceKey] = useState('');
 
   // Edit States
   const [editingMatch, setEditingMatch] = useState(null);
@@ -66,9 +67,11 @@ export default function Admin() {
       setPairs(pData || []);
       setSponsors(spData || []);
 
-      const { data: sData } = await supabase.from('settings').select('*').eq('id', 'elevenlabs_key').single();
+      const { data: sData, error: sError } = await supabase.from('settings').select('*').eq('id', 'elevenlabs_key').maybeSingle();
+      if (sError) console.warn("Erro ao buscar configurações:", sError.message);
       if (sData?.value) setElevenKey(sData.value);
-    } catch (e) { console.error(e); }
+      if (sData?.id === 'voicerss_key') setVoiceKey(sData.value);
+    } catch (e) { console.error("Erro no carregamento:", e); }
   };
 
   useEffect(() => { if (session) loadData(); }, [session, selectedT, selectedC]);
@@ -95,19 +98,61 @@ export default function Admin() {
     if (error) alert(error.message); else { alert('✅ Placar Oficializado!'); loadData(); }
   };
 
-  const createTournament = async () => { if (!newTName) return; await supabase.from('tournaments').insert([{ name: newTName }]); setNewTName(''); loadData(); };
-  const createCategory = async () => { if (!selectedT || !newCName) return; await supabase.from('categories').insert([{ tournament_id: selectedT, name: newCName }]); setNewCName(''); loadData(); };
-  const createCourt = async () => { if (!selectedT || !newCourtName) return; await supabase.from('courts').insert([{ tournament_id: selectedT, name: newCourtName }]); setNewCourtName(''); loadData(); };
-  const createSponsor = async () => { if (!newSponsor.name || !newSponsor.logo_url) return; await supabase.from('sponsors').insert([newSponsor]); setNewSponsor({ name: '', logo_url: '' }); loadData(); };
+  const createTournament = async () => { 
+    if (!newTName) return; 
+    const { error } = await supabase.from('tournaments').insert([{ name: newTName }]);
+    if (error) alert("Erro ao criar torneio: " + error.message);
+    else { setNewTName(''); loadData(); }
+  };
+  const createCategory = async () => { 
+    if (!selectedT || !newCName) return; 
+    const { error } = await supabase.from('categories').insert([{ tournament_id: selectedT, name: newCName }]);
+    if (error) alert("Erro ao criar categoria: " + error.message);
+    else { setNewCName(''); loadData(); }
+  };
+  const createCourt = async () => { 
+    if (!selectedT || !newCourtName) return; 
+    const { error } = await supabase.from('courts').insert([{ tournament_id: selectedT, name: newCourtName }]);
+    if (error) alert("Erro ao criar quadra: " + error.message);
+    else { setNewCourtName(''); loadData(); }
+  };
+  const createSponsor = async () => { 
+    if (!newSponsor.name || !newSponsor.logo_url) return; 
+    const { error } = await supabase.from('sponsors').insert([newSponsor]);
+    if (error) alert("Erro ao criar patrocinador: " + error.message);
+    else { setNewSponsor({ name: '', logo_url: '' }); loadData(); }
+  };
   const saveVoiceKey = async () => {
     if (!voiceKey) return;
     const { error } = await supabase.from('settings').upsert({ id: 'voicerss_key', value: voiceKey });
-    if (error) alert(error.message); else alert('✅ Chave VoiceRSS salva!');
+    if (error) alert(error.message); else alert('✅ Chave salva no banco!');
   };
 
-  const deleteSponsor = async (id) => { if (!window.confirm('Excluir este patrocinador?')) return; await supabase.from('sponsors').delete().eq('id', id); loadData(); };
-  const createPair = async () => { if (!selectedC || !atleta1 || !atleta2) return; await supabase.from('pairs').insert([{ category_id: selectedC, name: `${atleta1} / ${atleta2}` }]); setAtleta1(''); setAtleta2(''); loadData(); };
-  const createMatch = async () => { if (!selectedT || !selectedC || !matchP1 || !matchP2) return; await supabase.from('matches').insert([{ tournament_id: selectedT, category_id: selectedC, pair1_id: matchP1, pair2_id: matchP2, court_id: matchCourt || null, scheduled_time: matchTime || null, status: 'pending' }]); loadData(); setActiveTab('scoreboard'); };
+  const deleteSponsor = async (id) => { 
+    if (!window.confirm('Excluir este patrocinador?')) return; 
+    const { error } = await supabase.from('sponsors').delete().eq('id', id);
+    if (error) alert(error.message); else loadData();
+  };
+  const createPair = async () => { 
+    if (!selectedC || !atleta1 || !atleta2) return; 
+    const { error } = await supabase.from('pairs').insert([{ category_id: selectedC, name: `${atleta1} / ${atleta2}` }]);
+    if (error) alert("Erro ao criar dupla: " + error.message);
+    else { setAtleta1(''); setAtleta2(''); loadData(); }
+  };
+  const createMatch = async () => { 
+    if (!selectedT || !selectedC || !matchP1 || !matchP2) return; 
+    const { error } = await supabase.from('matches').insert([{ 
+      tournament_id: selectedT, 
+      category_id: selectedC, 
+      pair1_id: matchP1, 
+      pair2_id: matchP2, 
+      court_id: matchCourt || null, 
+      scheduled_time: matchTime || null, 
+      status: 'pending' 
+    }]);
+    if (error) alert("Erro ao criar partida: " + error.message);
+    else { loadData(); setActiveTab('scoreboard'); }
+  };
 
   const deleteMatch = async (id) => {
     if (!window.confirm('⚠️ Tem certeza que deseja APAGAR esta partida?')) return;
