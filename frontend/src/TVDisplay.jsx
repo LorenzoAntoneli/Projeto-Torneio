@@ -124,22 +124,25 @@ export default function TVDisplay() {
           .replace(/cat\.?/gi, 'Categoria')
           .replace(/mista/gi, 'Mista');
 
-        // Frase otimizada para o Google Tradutor (Máxima clareza)
-        const phrase = `Atenção jogadores!... Próximo jogo pela categoria ${cat}. . . ${p1}... contra... ${p2}. . . Favor dirigir-se à ${court}. . . Repetindo: ${p1} e ${p2} na ${court}.`;
-
-        // Motor Profissional: Amazon Polly (Vitoria) via StreamElements
-        // Esta voz é muito superior em clareza e pronúncia de nomes
-        const sPhrase = phrase.replace(/\. \. \./g, '. '); // Ajuste de pausas para Polly
-        const url = `https://api.streamelements.com/v2/channels/5f1489725f46a2542a033221/tts?voice=Vitoria&text=${encodeURIComponent(sPhrase)}`;
+        // Correção fonética para o sobrenome do usuário
+        const p1Clean = p1.replace(/Antoneli/gi, 'Antonéli');
+        const p2Clean = p2.replace(/Antoneli/gi, 'Antonéli');
         
-        const audio = new Audio(url);
-        audio.play().catch(e => {
-          console.error('Erro play Amazon Polly:', e);
-          // Fallback final: voz local do navegador se a nuvem falhar
-          const utterance = new SpeechSynthesisUtterance(phrase);
-          utterance.lang = 'pt-BR';
-          window.speechSynthesis.speak(utterance);
-        });
+        // Frase final otimizada (Amazon Polly via VoiceRSS)
+        const finalPhrase = `Atenção jogadores!... Próximo jogo pela categoria ${cat}. . . ${p1Clean}... enfrenta... ${p2Clean}. . . Favor dirigir-se à ${court}. . . Repetindo: ${p1Clean} e ${p2Clean} na ${court}.`;
+
+        if (voiceKey) {
+          // r=0 (velocidade normal), f=44khz_16bit_stereo (qualidade máxima), v=Camila (Amazon)
+          const url = `https://api.voicerss.org/?key=${voiceKey}&hl=pt-br&v=Camila&r=0&f=44khz_16bit_stereo&src=${encodeURIComponent(finalPhrase)}`;
+          const audio = new Audio(url);
+          audio.play().catch(e => {
+            console.error('Erro play VoiceRSS/Amazon:', e);
+            // Fallback final: voz local do navegador
+            const utterance = new SpeechSynthesisUtterance(finalPhrase);
+            utterance.lang = 'pt-BR';
+            window.speechSynthesis.speak(utterance);
+          });
+        }
       }, 1000);
 
     } catch (e) { console.error('Erro áudio/voz:', e); }
