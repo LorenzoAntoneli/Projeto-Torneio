@@ -127,7 +127,7 @@ export default function TVDisplay() {
         // Limpeza simples e eficaz para não confundir a IA
         const cleanCat = (match.category_name || 'Geral')
           .replace(/masc\.?/gi, 'Masculino').replace(/fem\.?/gi, 'Feminino');
-        
+
         // Frase direta e sem pontos excessivos (evita pular palavras)
         const speechText = `Atenção jogadores. Próximo jogo pela categoria ${cleanCat}. ${p1} contra ${p2}. Favor dirigir-se à ${court}.`;
 
@@ -135,17 +135,18 @@ export default function TVDisplay() {
           try {
             // Voice ID atualizado para 'Rachel' (Estável e Profissional)
             // Outras opções: 'pNIn79O7S7GWmkh8p3DG' (Adam), 'EXAVITQu4vr4xnSDxMaL' (Bella)
-            const voiceId = '21m00Tcm4TlvDq8ikWAM'; 
+            // Usando Adam (Voz Masculina padrão) e Modelo Turbo v2 (altíssima estabilidade)
+            const voiceId = 'pNIn79O7S7GWmkh8p3DG'; 
             const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
               method: 'POST',
               headers: { 
-                'xi-api-key': elevenKey,
+                'xi-api-key': elevenKey.trim(),
                 'Content-Type': 'application/json'
               },
               body: JSON.stringify({
                 text: speechText,
-                model_id: 'eleven_multilingual_v2',
-                voice_settings: { stability: 0.5, similarity_boost: 0.75 }
+                model_id: 'eleven_turbo_v2',
+                voice_settings: { stability: 0.4, similarity_boost: 0.8 }
               })
             });
 
@@ -158,7 +159,7 @@ export default function TVDisplay() {
             } else {
               const errorData = await response.json().catch(() => ({}));
               console.error('Erro ElevenLabs:', response.status, errorData);
-              
+
               // Fallback 1: Google TTS
               try {
                 const gUrl = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(speechText)}&tl=pt-br&client=tw-ob`;
@@ -211,7 +212,7 @@ export default function TVDisplay() {
       setCallingMatch(nextMatch);
       // Remove da fila
       setCallQueue(prev => prev.slice(1));
-      
+
       // Toca áudio e aguarda tempo da animação
       if (audioEnabled) playVoiceAnnouncement(nextMatch);
       setTimeout(() => setCallingMatch(null), 30000);
