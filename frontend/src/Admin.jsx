@@ -337,25 +337,6 @@ export default function Admin() {
                     <div className="app-card"><label className="input-label">Nova Categoria</label><div style={{ display: 'flex', gap: 10 }}><input value={newCName} onChange={e => setNewCName(e.target.value)} placeholder="Ex: Masculino A" style={{ marginBottom: 0 }} /><button onClick={createCategory} className="btn-primary" style={{ padding: '0 25px' }}><PlusCircle /></button></div></div>
                     <div className="app-card"><label className="input-label">Nova Quadra</label><div style={{ display: 'flex', gap: 10 }}><input value={newCourtName} onChange={e => setNewCourtName(e.target.value)} placeholder="Ex: Quadra 01" style={{ marginBottom: 0 }} /><button onClick={createCourt} className="btn-primary" style={{ padding: '0 25px' }}><MapPin /></button></div></div>
                     
-                    <div className="app-card">
-                      <div className="card-header">
-                        <Volume2 size={20} color="var(--accent-primary)" />
-                        <h3>VoiceRSS (Opcional)</h3>
-                      </div>
-                      <p style={{ fontSize: '0.8rem', opacity: 0.7, marginBottom: 15 }}>
-                        Insira sua API Key do VoiceRSS se desejar vozes específicas.
-                      </p>
-                      <div style={{ display: 'flex', gap: 10 }}>
-                        <input 
-                          type="password" 
-                          className="app-input" 
-                          placeholder="Cole sua API Key aqui..."
-                          value={voiceKey} 
-                          onChange={e => setVoiceKey(e.target.value)} 
-                        />
-                        <button onClick={saveVoiceKey} className="btn-primary" style={{ padding: '0 25px' }}>SALVAR CHAVE</button>
-                      </div>
-                    </div>
 
                     <div className="app-card" style={{ gridColumn: '1 / -1' }}>
                       <label className="input-label">Patrocinadores (Logos)</label>
