@@ -111,18 +111,24 @@ export default function TVDisplay() {
       playNote(523.25, audioCtx.currentTime, 0.6); // Dó
       playNote(659.25, audioCtx.currentTime + 0.15, 0.7); // Mi
 
-      // 2. Anúncio da Dupla via VoiceRSS (Nuvem)
+      // 2. Anúncio da Dupla via IA Google (Nuvem)
       setTimeout(() => {
         const p1 = match.pair1_name.replace('/', ' e ');
         const p2 = match.pair2_name.replace('/', ' e ');
-        const cat = match.category_name || 'Geral';
         const court = match.court_name;
 
-        // Frase com pausas dramáticas (vírgulas e pontos) para maior clareza no clube
-        const phrase = `Atenção para o próximo jogo!... Categoria: ${cat}!... ${p1}... enfrenta... ${p2}!... Favor dirigir-se agora para a ${court}. Repetindo... ${p1}... e... ${p2}... na ${court}.`;
+        // Limpeza de categoria para pronúncia perfeita
+        let cat = (match.category_name || 'Geral')
+          .replace(/masc\.?/gi, 'Masculino')
+          .replace(/fem\.?/gi, 'Feminino')
+          .replace(/cat\.?/gi, 'Categoria')
+          .replace(/mista/gi, 'Mista');
 
-        // IA Google (Limpando pontuação excessiva para não confundir o motor de tradução)
-        const gPhrase = phrase.replace(/\.\.\./g, '. ').replace(/!/g, '. ');
+        // Frase otimizada para o Google Tradutor (Máxima clareza)
+        const phrase = `Atenção jogadores!... Próximo jogo pela categoria ${cat}. . . ${p1}... contra... ${p2}. . . Favor dirigir-se à ${court}. . . Repetindo: ${p1} e ${p2} na ${court}.`;
+
+        // IA Google
+        const gPhrase = phrase.replace(/\.\.\./g, '. ');
         const url = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(gPhrase)}&tl=pt-br&client=tw-ob`;
         
         const audio = new Audio(url);
