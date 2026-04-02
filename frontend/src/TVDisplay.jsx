@@ -171,7 +171,7 @@ export default function TVDisplay() {
     .sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
 
   return (
-    <div className="tv-container" style={{ background: '#000', height: '100vh', color: '#fff', padding: '30px 50px', display: 'flex', flexDirection: 'column', overflow: 'hidden', position: 'relative', fontFamily: 'system-ui, sans-serif' }}>
+    <div className="tv-container" style={{ background: '#000', height: '100vh', color: '#fff', padding: '40px 60px', display: 'flex', flexDirection: 'column', overflow: 'hidden', position: 'relative', fontFamily: 'system-ui, sans-serif' }}>
 
       {/* HEADER CLÁSSICO (RESTAURADO) */}
       <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 40, paddingBottom: 25, borderBottom: '1px solid rgba(212,175,55,0.2)', background: '#000', flexShrink: 0 }}>
@@ -336,12 +336,11 @@ export default function TVDisplay() {
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
         
-        .ticker-wrap { width: 100%; height: 150px; background: #000; border-top: 1px solid rgba(212,175,55,0.3); overflow: hidden; display: flex; flex-direction: column; justify-content: center; padding: 10px 0; flex-shrink: 0; }
-        .ticker-label { color: var(--accent-primary); font-size: 1rem; font-weight: 900; letter-spacing: 3px; text-transform: uppercase; margin-bottom: 10px; padding-left: 20px; opacity: 0.6; }
-        .ticker { display: flex; white-space: nowrap; animation: scroll-ticker 30s linear infinite; }
-        .ticker-item { display: flex; align-items: center; gap: 15px; margin-right: 100px; }
-        .ticker-item img { height: 70px; width: auto; object-fit: contain; }
-        .ticker-item span { color: #fff; font-size: 1.2rem; font-weight: 900; letter-spacing: 1px; text-transform: uppercase; opacity: 0.7; }
+        .ticker-wrap { width: 100%; height: 140px; background: #000; border-top: 1px solid rgba(212,175,55,0.2); overflow: hidden; display: flex; flex-direction: column; justify-content: center; padding: 10px 0; flex-shrink: 0; }
+        .ticker-label { color: var(--accent-primary); font-size: 0.8rem; font-weight: 900; letter-spacing: 5px; text-transform: uppercase; margin-bottom: 12px; padding-left: 20px; opacity: 0.5; }
+        .ticker { display: flex; white-space: nowrap; animation: scroll-ticker 40s linear infinite; align-items: center; }
+        .ticker-item { display: flex; align-items: center; gap: 15px; margin-right: 30px; background: rgba(255,255,255,0.95); padding: 10px 40px; border-radius: 12px; box-shadow: 0 4px 15px rgba(212,175,55,0.15); min-width: 220px; justify-content: center; height: 80px; }
+        .ticker-item img { height: 100%; width: auto; max-width: 180px; object-fit: contain; }
         
         @keyframes scroll-ticker {
           0% { transform: translateX(0); }
@@ -357,8 +356,7 @@ export default function TVDisplay() {
             {/* Duplicamos a lista para o efeito infinito suave */}
             {[...sponsors, ...sponsors, ...sponsors, ...sponsors].map((s, idx) => (
               <div key={`${s.id}-${idx}`} className="ticker-item">
-                <img src={s.logo_url} alt={s.name} />
-                <span>{s.name}</span>
+                <img src={s.logo_url} alt={s.name} title={s.name} />
               </div>
             ))}
           </div>
