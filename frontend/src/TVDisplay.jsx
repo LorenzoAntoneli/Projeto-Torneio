@@ -133,7 +133,7 @@ export default function TVDisplay() {
 
         if (elevenKey) {
           try {
-            const voiceId = 'nPczCwiI2777P64pA684'; // Serene (Voz clara e imponente)
+            const voiceId = 'z9fAnlkS93p57zGZ43C2'; // Glinda (Voz Premade - Garantida para todas as contas)
             const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
               method: 'POST',
               headers: { 
