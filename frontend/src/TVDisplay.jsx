@@ -11,6 +11,8 @@ export default function TVDisplay() {
   const [calledIds, setCalledIds] = useState(new Set());
   const [audioEnabled, setAudioEnabled] = useState(false);
   const [currentSlide, setCurrentSlide] = useState(0); // 0: Geral, 1: Próximas, 2: Resultados
+  const [sponsors, setSponsors] = useState([]);
+  const [callQueue, setCallQueue] = useState([]);
 
   const loadMatches = async (finishId = null) => {
     try {
@@ -49,8 +51,14 @@ export default function TVDisplay() {
     } catch (e) { console.error('Erro TV:', e); }
   };
 
+  const loadSponsors = async () => {
+    const { data } = await supabase.from('sponsors').select('*').eq('active', true).order('created_at', { ascending: true });
+    setSponsors(data || []);
+  };
+
   useEffect(() => {
     loadMatches();
+    loadSponsors();
     const timer = setInterval(() => {
       const now = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
       setCurrentTime(now);
@@ -59,16 +67,18 @@ export default function TVDisplay() {
     const ch = supabase.channel('tv_rt').on('postgres_changes', { event: '*', schema: 'public', table: 'matches' }, (p) => {
       if (p.eventType === 'UPDATE' && p.new.status === 'finished' && p.old?.status !== 'finished') loadMatches(p.new.id);
       else loadMatches();
+    }).on('postgres_changes', { event: '*', schema: 'public', table: 'sponsors' }, () => {
+      loadSponsors();
     }).subscribe();
 
-    // Ciclo de Slides (1 minuto = 60000ms)
+    // Ciclo de Slides (1 minuto = 60000ms) - Agora com 4 telas (Geral, Próximas, Resultados, Patrocinadores)
     const slideTimer = setInterval(() => {
-      setCurrentSlide(prev => (prev + 1) % 3);
+      setCurrentSlide(prev => (prev + 1) % 4);
     }, 60000);
 
     return () => { clearInterval(timer); clearInterval(slideTimer); supabase.removeChannel(ch); };
   }, []);
-  
+
   // Pré-carregar vozes do sistema (necessário em alguns navegadores)
   useEffect(() => {
     const loadVoices = () => { window.speechSynthesis.getVoices(); };
@@ -80,7 +90,7 @@ export default function TVDisplay() {
   const playVoiceAnnouncement = (match) => {
     try {
       const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      
+
       // 1. Sinal sonoro curto (Ding-Dong) - Atenção
       const playNote = (freq, startTime, duration) => {
         const osc = audioCtx.createOscillator();
@@ -103,34 +113,34 @@ export default function TVDisplay() {
         const court = match.court_name;
 
         // Frase com ritmo mais natural e pronúncia ajustada
-        const phrase = `Atenção no Careca´s Beach Club... Partida pela categoria: ${cat}... Dupla um: ${p1}. Verssus. Dupla dois: ${p2}... Favor, dirigir-se imediatamente à ${court}.`;
-        
+        const phrase = `Atenção no Carecas Beach Club... Partida pela categoria: ${cat}... Dupla um: ${p1}. Contra. Dupla dois: ${p2}... Favor, dirigir-se imediatamente à ${court}.`;
+
         const utterance = new SpeechSynthesisUtterance(phrase);
         utterance.lang = 'pt-BR';
         utterance.rate = 0.95;  // Ligeiramente mais lento para clareza
         utterance.pitch = 1.1;  // Ajustado para um tom mais feminino e menos robótico
-        
+
         const voices = synth.getVoices();
         const femaleVoiceNames = [
-            'Francisca', 'Maria', 'Heloisa', 'Luciana', 'Vitoria', 'Joana', 'Google', 'Female', 'Online'
+          'Francisca', 'Maria', 'Heloisa', 'Luciana', 'Vitoria', 'Joana', 'Google', 'Female', 'Online'
         ];
         const maleVoiceNames = ['Daniel', 'Antonio', 'Ricardo', 'Helder', 'Male', 'Guy'];
-        
+
         // 1. Tenta a lista de preferência (Nomes femininos específicos)
         let selectedVoice = null;
         for (const name of femaleVoiceNames) {
-            selectedVoice = voices.find(v => v.name.includes(name) && v.lang.includes('pt-BR'));
-            if (selectedVoice) break;
+          selectedVoice = voices.find(v => v.name.includes(name) && v.lang.includes('pt-BR'));
+          if (selectedVoice) break;
         }
-        
+
         // 2. Se não achou específica, tenta qualquer uma pt-BR que NÃO seja masculina (filtro rigoroso)
         if (!selectedVoice) {
-            selectedVoice = voices.find(v => v.lang.includes('pt-BR') && !maleVoiceNames.some(m => v.name.toLowerCase().includes(m.toLowerCase())));
+          selectedVoice = voices.find(v => v.lang.includes('pt-BR') && !maleVoiceNames.some(m => v.name.toLowerCase().includes(m.toLowerCase())));
         }
-        
+
         // 3. Fallback final (qualquer pt-BR)
         if (!selectedVoice) selectedVoice = voices.find(v => v.lang.includes('pt-BR'));
-        
+
         if (selectedVoice) utterance.voice = selectedVoice;
 
         // Limpa anúncios na fila para evitar sobreposição
@@ -141,17 +151,32 @@ export default function TVDisplay() {
     } catch (e) { console.error('Erro áudio/voz:', e); }
   };
 
+  // 1. COLETOR: Monitora partidas para o horário atual e adiciona na fila
   useEffect(() => {
-    const toCallList = matches.filter(m => m.status === 'pending' && m.scheduled_time === currentTime && !calledIds.has(m.id));
-    if (toCallList.length > 0 && !callingMatch) {
-      const nextMatch = toCallList[0];
+    const toQueue = matches.filter(m => m.status === 'pending' && m.scheduled_time === currentTime && !calledIds.has(m.id));
+    if (toQueue.length > 0) {
+      setCallQueue(prev => [...prev, ...toQueue]);
+      setCalledIds(prev => {
+        const next = new Set(prev);
+        toQueue.forEach(m => next.add(m.id));
+        return next;
+      });
+    }
+  }, [currentTime, matches, calledIds]);
+
+  // 2. PROCESSADOR: Executa as chamadas da fila uma por uma
+  useEffect(() => {
+    if (callQueue.length > 0 && !callingMatch) {
+      const nextMatch = callQueue[0];
       setCallingMatch(nextMatch);
-      setCalledIds(prev => new Set(prev).add(nextMatch.id));
+      // Remove da fila
+      setCallQueue(prev => prev.slice(1));
+      
+      // Toca áudio e aguarda tempo da animação
       if (audioEnabled) playVoiceAnnouncement(nextMatch);
-      // Duração aumentada para sincronizar com a fala da voz (30 segundos)
       setTimeout(() => setCallingMatch(null), 30000);
     }
-  }, [currentTime, matches, calledIds, callingMatch, audioEnabled]);
+  }, [callQueue, callingMatch, audioEnabled]);
 
   const activeMatches = matches.filter(m => m.status !== 'finished');
   const categoriesPresent = [...new Set(activeMatches.map(m => m.category_name))];
@@ -171,7 +196,7 @@ export default function TVDisplay() {
             <div style={{ display: 'flex', gap: 15, alignItems: 'center', marginTop: 10 }}>
               <span style={{ letterSpacing: 8, opacity: 0.5, fontSize: '0.8rem' }}>Torneio em Tempo Real</span>
               <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#2ecc71', boxShadow: '0 0 10px #2ecc71' }}></div>
-              <span style={{ fontSize: '0.6rem', opacity: 0.3, textTransform: 'uppercase' }}>{currentSlide === 0 ? "Geral" : currentSlide === 1 ? "Próximas" : "Resultados"}</span>
+              <span style={{ fontSize: '0.6rem', opacity: 0.3, textTransform: 'uppercase' }}>{currentSlide === 0 ? "Geral" : currentSlide === 1 ? "Próximas" : currentSlide === 2 ? "Resultados" : "Patrocinadores"}</span>
             </div>
           </div>
         </div>
@@ -263,6 +288,21 @@ export default function TVDisplay() {
             </div>
           </div>
         )}
+
+        {/* SLIDE 3: PATROCINADORES (Foco total nas marcas) */}
+        {currentSlide === 3 && (
+          <div className="fade-in" style={{ textAlign: 'center', height: '60vh', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+            <h2 style={{ color: 'var(--accent-primary)', fontSize: '2.5rem', textTransform: 'uppercase', letterSpacing: 10, marginBottom: 60 }}>• Nossos Patrocinadores •</h2>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 60, padding: '0 100px', alignItems: 'center' }}>
+              {sponsors.length > 0 ? sponsors.map(s => (
+                <div key={s.id} style={{ animation: 'fadeIn 1s ease-in-out', textAlign: 'center' }}>
+                  <img src={s.logo_url} alt={s.name} style={{ width: '100%', maxHeight: 180, objectFit: 'contain', filter: 'drop-shadow(0 10px 20px rgba(212,175,55,0.2))' }} />
+                  <p style={{ marginTop: 25, fontSize: '1.2rem', fontWeight: 900, letterSpacing: 4, opacity: 0.6 }}>{s.name.toUpperCase()}</p>
+                </div>
+              )) : <p style={{ opacity: 0.2, fontSize: '2rem' }}>Agradecemos aos nossos apoiadores!</p>}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* OVERLAY: Chamada de Dupla (Alert) */}
@@ -307,7 +347,33 @@ export default function TVDisplay() {
         .fade-in { animation: fadeIn 2s ease-in-out; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
+        
+        .ticker-wrap { position: fixed; bottom: 0; left: 0; width: 100%; height: 120px; background: #000; border-top: 2px solid var(--accent-primary); z-index: 1000; overflow: hidden; display: flex; align-items: center; }
+        .ticker { display: flex; white-space: nowrap; animation: scroll-ticker 30s linear infinite; }
+        .ticker-item { display: flex; align-items: center; gap: 15px; margin-right: 80px; }
+        .ticker-item img { height: 60px; width: auto; object-fit: contain; filter: grayscale(0.2) brightness(1.2); }
+        .ticker-item span { color: #fff; font-size: 1.2rem; font-weight: 900; letter-spacing: 2px; text-transform: uppercase; opacity: 0.8; }
+        
+        @keyframes scroll-ticker {
+          0% { transform: translateX(0); }
+          100% { transform: translateX(-50%); }
+        }
       `}</style>
+
+      {/* RODAPÉ DE PATROCINADORES (TICKER) */}
+      {sponsors.length > 0 && (
+        <div className="ticker-wrap">
+          <div className="ticker">
+            {/* Duplicamos a lista para o efeito infinito suave */}
+            {[...sponsors, ...sponsors, ...sponsors].map((s, idx) => (
+              <div key={`${s.id}-${idx}`} className="ticker-item">
+                <img src={s.logo_url} alt={s.name} />
+                <span>{s.name}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

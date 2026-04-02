@@ -14,6 +14,7 @@ export default function Admin() {
   const [categories, setCategories] = useState([]);
   const [pairs, setPairs] = useState([]);
   const [courts, setCourts] = useState([]);
+  const [sponsors, setSponsors] = useState([]);
 
   // Form States
   const [selectedT, setSelectedT] = useState('');
@@ -21,6 +22,7 @@ export default function Admin() {
   const [newTName, setNewTName] = useState('');
   const [newCName, setNewCName] = useState('');
   const [newCourtName, setNewCourtName] = useState('');
+  const [newSponsor, setNewSponsor] = useState({ name: '', logo_url: '' });
   const [atleta1, setAtleta1] = useState('');
   const [atleta2, setAtleta2] = useState('');
   const [matchP1, setMatchP1] = useState('');
@@ -42,6 +44,7 @@ export default function Admin() {
       const { data: pData } = await supabase.from('pairs').select('*');
       const { data: coData } = await supabase.from('courts').select('*');
       const { data: mData } = await supabase.from('matches').select('*').order('updated_at', { ascending: false });
+      const { data: spData } = await supabase.from('sponsors').select('*').order('created_at', { ascending: true });
 
       setTournaments(tData || []);
       const catMap = {}; (cData || []).forEach(c => catMap[c.id] = c);
@@ -60,6 +63,7 @@ export default function Admin() {
       setCategories(cData || []);
       setCourts(coData || []);
       setPairs(pData || []);
+      setSponsors(spData || []);
     } catch (e) { console.error(e); }
   };
 
@@ -90,6 +94,8 @@ export default function Admin() {
   const createTournament = async () => { if (!newTName) return; await supabase.from('tournaments').insert([{ name: newTName }]); setNewTName(''); loadData(); };
   const createCategory = async () => { if (!selectedT || !newCName) return; await supabase.from('categories').insert([{ tournament_id: selectedT, name: newCName }]); setNewCName(''); loadData(); };
   const createCourt = async () => { if (!selectedT || !newCourtName) return; await supabase.from('courts').insert([{ tournament_id: selectedT, name: newCourtName }]); setNewCourtName(''); loadData(); };
+  const createSponsor = async () => { if (!newSponsor.name || !newSponsor.logo_url) return; await supabase.from('sponsors').insert([newSponsor]); setNewSponsor({ name: '', logo_url: '' }); loadData(); };
+  const deleteSponsor = async (id) => { if (!window.confirm('Excluir este patrocinador?')) return; await supabase.from('sponsors').delete().eq('id', id); loadData(); };
   const createPair = async () => { if (!selectedC || !atleta1 || !atleta2) return; await supabase.from('pairs').insert([{ category_id: selectedC, name: `${atleta1} / ${atleta2}` }]); setAtleta1(''); setAtleta2(''); loadData(); };
   const createMatch = async () => { if (!selectedT || !selectedC || !matchP1 || !matchP2) return; await supabase.from('matches').insert([{ tournament_id: selectedT, category_id: selectedC, pair1_id: matchP1, pair2_id: matchP2, court_id: matchCourt || null, scheduled_time: matchTime || null, status: 'pending' }]); loadData(); setActiveTab('scoreboard'); };
 
@@ -275,6 +281,24 @@ export default function Admin() {
                   <div style={{ display: 'grid', gap: 20 }}>
                     <div className="app-card"><label className="input-label">Nova Categoria</label><div style={{ display: 'flex', gap: 10 }}><input value={newCName} onChange={e => setNewCName(e.target.value)} placeholder="Ex: Masculino A" style={{ marginBottom: 0 }} /><button onClick={createCategory} className="btn-primary" style={{ padding: '0 25px' }}><PlusCircle /></button></div></div>
                     <div className="app-card"><label className="input-label">Nova Quadra</label><div style={{ display: 'flex', gap: 10 }}><input value={newCourtName} onChange={e => setNewCourtName(e.target.value)} placeholder="Ex: Quadra 01" style={{ marginBottom: 0 }} /><button onClick={createCourt} className="btn-primary" style={{ padding: '0 25px' }}><MapPin /></button></div></div>
+                    
+                    <div className="app-card" style={{ gridColumn: '1 / -1' }}>
+                      <label className="input-label">Patrocinadores (Logos)</label>
+                      <div style={{ display: 'flex', gap: 10, marginBottom: 20 }}>
+                        <input value={newSponsor.name} onChange={e => setNewSponsor({...newSponsor, name: e.target.value})} placeholder="Nome da Marca" style={{ marginBottom: 0 }} />
+                        <input value={newSponsor.logo_url} onChange={e => setNewSponsor({...newSponsor, logo_url: e.target.value})} placeholder="URL da Logo (PNG ou JPG)" style={{ marginBottom: 0 }} />
+                        <button onClick={createSponsor} className="btn-primary" style={{ padding: '0 25px' }}><PlusCircle /></button>
+                      </div>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: 15 }}>
+                        {sponsors.map(s => (
+                          <div key={s.id} style={{ background: 'rgba(255,255,255,0.03)', padding: 10, borderRadius: 12, border: '1px solid rgba(255,255,255,0.1)', textAlign: 'center', position: 'relative' }}>
+                            <img src={s.logo_url} alt={s.name} style={{ width: '100%', height: 40, objectFit: 'contain', marginBottom: 5 }} />
+                            <div style={{ fontSize: '0.6rem', opacity: 0.5, whiteSpace: 'nowrap', overflow: 'hidden' }}>{s.name}</div>
+                            <button onClick={() => deleteSponsor(s.id)} style={{ position: 'absolute', top: -5, right: -5, background: '#ff4d4d', color: '#fff', border: 'none', borderRadius: '50%', width: 20, height: 20, fontSize: 10, cursor: 'pointer' }}>X</button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
                   </div>
                 )}
               </>
