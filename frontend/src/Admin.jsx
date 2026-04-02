@@ -67,7 +67,7 @@ export default function Admin() {
       setSponsors(spData || []);
 
       const { data: sData } = await supabase.from('settings').select('*').eq('id', 'elevenlabs_key').single();
-      if (sData && !elevenKey) setElevenKey(sData.value);
+      if (sData?.value) setElevenKey(sData.value);
     } catch (e) { console.error(e); }
   };
 
@@ -105,25 +105,6 @@ export default function Admin() {
     if (error) alert(error.message); else alert('✅ Chave ElevenLabs salva!');
   };
 
-  const testElevenLabs = async () => {
-    try {
-      const response = await fetch('https://api.elevenlabs.io/v1/voices', {
-        headers: { 'xi-api-key': elevenKey.trim() }
-      });
-      const data = await response.json();
-      console.log('--- VOZES DISPONÍVEIS NA SUA CONTA ---');
-      if (data.voices) {
-        console.table(data.voices.map(v => ({ Nome: v.name, ID: v.voice_id })));
-        alert('✅ Lista de vozes enviada para o Console (F12). Copie um ID de lá!');
-      } else {
-        console.error('Resposta inesperada:', data);
-        alert('❌ Erro na resposta da API.');
-      }
-    } catch (err) {
-      console.error(err);
-      alert('❌ Erro ao buscar vozes. Verifique sua chave.');
-    }
-  };
   const deleteSponsor = async (id) => { if (!window.confirm('Excluir este patrocinador?')) return; await supabase.from('sponsors').delete().eq('id', id); loadData(); };
   const createPair = async () => { if (!selectedC || !atleta1 || !atleta2) return; await supabase.from('pairs').insert([{ category_id: selectedC, name: `${atleta1} / ${atleta2}` }]); setAtleta1(''); setAtleta2(''); loadData(); };
   const createMatch = async () => { if (!selectedT || !selectedC || !matchP1 || !matchP2) return; await supabase.from('matches').insert([{ tournament_id: selectedT, category_id: selectedC, pair1_id: matchP1, pair2_id: matchP2, court_id: matchCourt || null, scheduled_time: matchTime || null, status: 'pending' }]); loadData(); setActiveTab('scoreboard'); };
@@ -324,12 +305,6 @@ export default function Admin() {
                         />
                         <button onClick={saveElevenKey} className="btn-primary" style={{ padding: '0 25px' }}>SALVAR CHAVE</button>
                       </div>
-                      <button 
-                        onClick={testElevenLabs} 
-                        style={{ marginTop: 15, background: 'rgba(255,255,255,0.05)', color: 'var(--accent-primary)', border: '1px solid var(--accent-primary)', padding: '12px 20px', borderRadius: 8, cursor: 'pointer', fontSize: '0.7rem', fontWeight: 800, width: '100%', textTransform: 'uppercase', letterSpacing: 1 }}
-                      >
-                        🔍 DIAGNÓSTICO: Listar Vozes Disponíveis no Console (F12)
-                      </button>
                     </div>
 
                     <div className="app-card" style={{ gridColumn: '1 / -1' }}>

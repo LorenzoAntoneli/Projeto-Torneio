@@ -61,10 +61,10 @@ export default function TVDisplay() {
   const loadSettings = async () => {
     const { data } = await supabase.from('settings').select('*');
     if (data) {
-      const vKey = data.find(s => s.id === 'voicerss_key')?.value;
       const eKey = data.find(s => s.id === 'elevenlabs_key')?.value;
       if (vKey) setVoiceKey(vKey);
-      if (eKey && !elevenKey) setElevenKey(eKey);
+      // Priorizar a chave vinda do banco de dados (que você salva no admin)
+      if (eKey) setElevenKey(eKey);
     }
   };
 
@@ -135,18 +135,20 @@ export default function TVDisplay() {
           try {
             // Voice ID atualizado para 'Rachel' (Estável e Profissional)
             // Outras opções: 'pNIn79O7S7GWmkh8p3DG' (Adam), 'EXAVITQu4vr4xnSDxMaL' (Bella)
-            // Usando Adam (Voz Masculina padrão) e Modelo Turbo v2 (altíssima estabilidade)
-            const voiceId = 'pNIn79O7S7GWmkh8p3DG'; 
+            // Voz da Rachel (Brasileira/Multilingual) e modelo v2 estável
+            const voiceId = '21m00Tcm4TlvDq8ikWAM'; 
+            const finalKey = elevenKey.trim() || 'sk_5d5169133c0b408c2c108e9f9818f316623d3fe1db242bfc';
+            
             const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
               method: 'POST',
               headers: { 
-                'xi-api-key': elevenKey.trim(),
+                'xi-api-key': finalKey,
                 'Content-Type': 'application/json'
               },
               body: JSON.stringify({
                 text: speechText,
-                model_id: 'eleven_turbo_v2',
-                voice_settings: { stability: 0.4, similarity_boost: 0.8 }
+                model_id: 'eleven_multilingual_v2',
+                voice_settings: { stability: 0.5, similarity_boost: 0.75 }
               })
             });
 
