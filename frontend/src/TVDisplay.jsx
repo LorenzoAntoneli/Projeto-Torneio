@@ -13,6 +13,7 @@ export default function TVDisplay() {
   const [currentSlide, setCurrentSlide] = useState(0); // 0: Geral, 1: Próximas, 2: Resultados
   const [sponsors, setSponsors] = useState([]);
   const [callQueue, setCallQueue] = useState([]);
+  const [voiceKey, setVoiceKey] = useState('');
 
   const loadMatches = async (finishId = null) => {
     try {
@@ -56,9 +57,15 @@ export default function TVDisplay() {
     setSponsors(data || []);
   };
 
+  const loadSettings = async () => {
+    const { data } = await supabase.from('settings').select('*').eq('id', 'voicerss_key').single();
+    if (data) setVoiceKey(data.value);
+  };
+
   useEffect(() => {
     loadMatches();
     loadSponsors();
+    loadSettings();
     const timer = setInterval(() => {
       const now = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
       setCurrentTime(now);
@@ -104,48 +111,27 @@ export default function TVDisplay() {
       playNote(523.25, audioCtx.currentTime, 0.6); // Dó
       playNote(659.25, audioCtx.currentTime + 0.15, 0.7); // Mi
 
-      // 2. Anúncio da Dupla
+      // 2. Anúncio da Dupla via VoiceRSS (Nuvem)
       setTimeout(() => {
-        const synth = window.speechSynthesis;
         const p1 = match.pair1_name.replace('/', ' e ');
         const p2 = match.pair2_name.replace('/', ' e ');
         const cat = match.category_name || 'Geral';
         const court = match.court_name;
 
-        // Frase com ritmo mais natural e pronúncia ajustada
-        const phrase = `Atenção no Carecas Beach Club... Partida pela categoria: ${cat}... Dupla um: ${p1}. Contra. Dupla dois: ${p2}... Favor, dirigir-se imediatamente à ${court}.`;
+        // Frase equilibrada
+        const phrase = `Atenção... Partida pela categoria ${cat}... Dupla um: ${p1}. Contra. Dupla dois: ${p2}... Favor, dirigir-se à ${court}.`;
 
-        const utterance = new SpeechSynthesisUtterance(phrase);
-        utterance.lang = 'pt-BR';
-        utterance.rate = 0.95;  // Ligeiramente mais lento para clareza
-        utterance.pitch = 1.1;  // Ajustado para um tom mais feminino e menos robótico
-
-        const voices = synth.getVoices();
-        const femaleVoiceNames = [
-          'Francisca', 'Maria', 'Heloisa', 'Luciana', 'Vitoria', 'Joana', 'Google', 'Female', 'Online'
-        ];
-        const maleVoiceNames = ['Daniel', 'Antonio', 'Ricardo', 'Helder', 'Male', 'Guy'];
-
-        // 1. Tenta a lista de preferência (Nomes femininos específicos)
-        let selectedVoice = null;
-        for (const name of femaleVoiceNames) {
-          selectedVoice = voices.find(v => v.name.includes(name) && v.lang.includes('pt-BR'));
-          if (selectedVoice) break;
+        // Se tivermos a chave do VoiceRSS, usamos a voz de nuvem (Compatível com tudo)
+        if (voiceKey) {
+          const url = `https://api.voicerss.org/?key=${voiceKey}&hl=pt-br&v=Bia&src=${encodeURIComponent(phrase)}&f=44khz_16bit_stereo`;
+          const audio = new Audio(url);
+          audio.play().catch(e => console.error('Erro play VoiceRSS:', e));
+        } else {
+          // Fallback para voz local se não houver chave (apenas para emergência)
+          const utterance = new SpeechSynthesisUtterance(phrase);
+          utterance.lang = 'pt-BR';
+          window.speechSynthesis.speak(utterance);
         }
-
-        // 2. Se não achou específica, tenta qualquer uma pt-BR que NÃO seja masculina (filtro rigoroso)
-        if (!selectedVoice) {
-          selectedVoice = voices.find(v => v.lang.includes('pt-BR') && !maleVoiceNames.some(m => v.name.toLowerCase().includes(m.toLowerCase())));
-        }
-
-        // 3. Fallback final (qualquer pt-BR)
-        if (!selectedVoice) selectedVoice = voices.find(v => v.lang.includes('pt-BR'));
-
-        if (selectedVoice) utterance.voice = selectedVoice;
-
-        // Limpa anúncios na fila para evitar sobreposição
-        synth.cancel();
-        synth.speak(utterance);
       }, 1000);
 
     } catch (e) { console.error('Erro áudio/voz:', e); }
