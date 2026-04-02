@@ -61,6 +61,7 @@ export default function TVDisplay() {
   const loadSettings = async () => {
     const { data } = await supabase.from('settings').select('*');
     if (data) {
+      const vKey = data.find(s => s.id === 'voicerss_key')?.value;
       const eKey = data.find(s => s.id === 'elevenlabs_key')?.value;
       if (vKey) setVoiceKey(vKey);
       // Priorizar a chave vinda do banco de dados (que você salva no admin)
