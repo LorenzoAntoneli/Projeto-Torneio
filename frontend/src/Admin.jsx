@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from './supabase';
 import { Swords, LogOut, Monitor, PlusCircle, UserPlus, Gamepad2, Settings, MapPin, LayoutList, Trash2, Pencil } from 'lucide-react';
+import logo from './assets/logo.jpg';
 
 export default function Admin() {
   const [session, setSession] = useState(localStorage.getItem('bt_session'));
@@ -125,8 +126,10 @@ export default function Admin() {
 
   if (!session) return (
     <div style={{ height: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center', background: '#000', padding: 20 }}>
-      <div className="app-card" style={{ width: '100%', maxWidth: 400, textAlign: 'center' }}>
-        <h2 style={{ color: 'var(--accent-primary)', marginBottom: 30, letterSpacing: 2 }}>CARECA’S ACCESS</h2>
+      {/* Remover borda do card de login para integrar a logo perfeitamente */}
+      <div className="app-card" style={{ width: '100%', maxWidth: 400, textAlign: 'center', padding: '40px 20px', border: 'none', boxShadow: 'none' }}>
+        <img src={logo} alt="Careca's Logo" style={{ width: 140, marginBottom: 20, display: 'block', margin: '0 auto 20px' }} />
+        <h2 style={{ color: 'var(--accent-primary)', marginBottom: 30, letterSpacing: 2, fontSize: '0.9rem' }}>ACESSO RESTRITO</h2>
         <form onSubmit={handleLogin}><input type="password" placeholder="Senha" value={password} onChange={e => setPassword(e.target.value)} /><button type="submit" className="btn-primary" style={{ width: '100%', padding: 18 }}>ENTRAR AGORA</button></form>
       </div>
     </div>
@@ -136,7 +139,10 @@ export default function Admin() {
     <div className="admin-wrapper">
       {/* SIDEBAR (Desktop Only) */}
       <aside className="sidebar">
-        <div className="sidebar-logo">CARECA’S CLUB</div>
+        <div className="sidebar-logo" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '20px 0', justifyContent: 'center' }}>
+          <img src={logo} alt="Logo" style={{ width: 50, height: 'auto' }} />
+          <span style={{ fontSize: '1rem', fontWeight: 950, color: '#fff', letterSpacing: 1 }}>CARECA'S</span>
+        </div>
         <nav className="nav-group">
           <div className={`nav-item ${activeTab === 'scoreboard' ? 'active' : ''}`} onClick={() => setActiveTab('scoreboard')}><Swords size={20} /> Score (Ativos)</div>
           <div className={`nav-item ${activeTab === 'history' ? 'active' : ''}`} onClick={() => setActiveTab('history')}><LayoutList size={20} /> Partidas (Encerradas)</div>

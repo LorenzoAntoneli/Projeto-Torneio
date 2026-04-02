@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from './supabase';
 import { Trophy, Clock, MapPin, Star } from 'lucide-react';
+import logo from './assets/logo.jpg';
 
 export default function TVDisplay() {
   const [matches, setMatches] = useState([]);
@@ -124,13 +125,16 @@ export default function TVDisplay() {
     <div className="tv-container" style={{background: '#000', minHeight: '100vh', color: '#fff', padding: '40px', position: 'relative', fontFamily: 'system-ui, sans-serif'}}>
       
       {/* HEADER FIXO */}
-      <header style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 60, borderBottom: '1px solid rgba(212,175,55,0.2)', paddingBottom: 20}}>
-        <div>
-           <h1 style={{fontSize: '3.5rem', fontWeight: 950, color: 'var(--accent-primary)', textTransform: 'uppercase', margin: 0}}>Careca’s Club</h1>
-           <div style={{display:'flex', gap:15, alignItems:'center', marginTop:10}}>
-             <span style={{letterSpacing: 8, opacity: 0.5, fontSize: '0.8rem'}}>Torneio em Tempo Real</span>
-             <div style={{width:8, height:8, borderRadius:'50%', background:'#2ecc71', boxShadow:'0 0 10px #2ecc71'}}></div>
-             <span style={{fontSize:'0.6rem', opacity:0.3, textTransform:'uppercase'}}>{currentSlide === 0 ? "Geral" : currentSlide === 1 ? "Próximas" : "Resultados"}</span>
+      <header style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 60, borderBottom: '1px solid rgba(212,175,55,0.2)', paddingBottom: 30, background: '#000'}}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 30 }}>
+           <img src={logo} alt="Careca's Logo" style={{ height: 130, objectFit: 'contain' }} />
+           <div>
+              <h1 style={{fontSize: '3.5rem', fontWeight: 950, color: 'var(--accent-primary)', textTransform: 'uppercase', margin: 0}}>Careca’s Club</h1>
+              <div style={{display:'flex', gap:15, alignItems:'center', marginTop:10}}>
+                <span style={{letterSpacing: 8, opacity: 0.5, fontSize: '0.8rem'}}>Torneio em Tempo Real</span>
+                <div style={{width:8, height:8, borderRadius:'50%', background:'#2ecc71', boxShadow:'0 0 10px #2ecc71'}}></div>
+                <span style={{fontSize:'0.6rem', opacity:0.3, textTransform:'uppercase'}}>{currentSlide === 0 ? "Geral" : currentSlide === 1 ? "Próximas" : "Resultados"}</span>
+              </div>
            </div>
         </div>
         <div style={{textAlign: 'right'}}>
@@ -225,7 +229,7 @@ export default function TVDisplay() {
 
       {/* OVERLAY: Chamada de Dupla (Alert) */}
       {callingMatch && (
-        <div style={{position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(0,0,0,0.95)', zIndex: 20000, display: 'flex', justifyContent: 'center', alignItems: 'center'}}>
+        <div style={{position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: '#000', zIndex: 20000, display: 'flex', justifyContent: 'center', alignItems: 'center'}}>
            <div style={{textAlign: 'center', animation: 'pulse 1.5s infinite'}}>
               <Clock size={120} color="var(--accent-primary)" style={{marginBottom: 30}} />
               <h2 style={{fontSize: '2rem', letterSpacing: 10, opacity: 0.6}}>CHAMADA DE JOGO</h2>
@@ -239,7 +243,7 @@ export default function TVDisplay() {
 
       {/* OVERLAY: Vitória */}
       {victory && (
-        <div style={{position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(0,0,0,0.98)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 21000}}>
+        <div style={{position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: '#000', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 21000, backdropFilter: 'blur(20px)'}}>
            <div style={{textAlign: 'center'}}>
               <Trophy size={180} color="var(--accent-primary)" style={{marginBottom: 30}} />
               <h3 style={{fontSize: '1.5rem', color: '#fff', letterSpacing: 5, opacity: 0.6}}>{victory.category.toUpperCase()}</h3>
@@ -251,7 +255,7 @@ export default function TVDisplay() {
 
       {/* Overlay de Ativação Inicial */}
       {!audioEnabled && (
-        <div style={{position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(0,0,0,0.98)', zIndex: 100000, display: 'flex', justifyContent: 'center', alignItems: 'center', flexDirection: 'column', backdropFilter: 'blur(10px)'}}>
+        <div style={{position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: '#000', zIndex: 100000, display: 'flex', justifyContent: 'center', alignItems: 'center', flexDirection: 'column', backdropFilter: 'blur(30px)'}}>
            <Trophy size={100} color="var(--accent-primary)" style={{marginBottom: 30}} />
            <h2 style={{color: '#fff', fontSize: '2rem', marginBottom: 40, letterSpacing: 5, fontWeight:900}}>CARECA’S BEACH CLUB</h2>
            <button className="btn-primary" style={{padding: '35px 70px', fontSize: '1.8rem', fontWeight: 950, borderRadius: 100, display: 'flex', alignItems: 'center', gap: 20, boxShadow: '0 20px 50px rgba(212,175,55,0.3)'}} onClick={() => { setAudioEnabled(true); playChime(); }}>

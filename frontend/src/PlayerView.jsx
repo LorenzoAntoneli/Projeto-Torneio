@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from './supabase';
 import { Search, Trophy, Clock, Medal } from 'lucide-react';
+import logo from './assets/logo.jpg';
 
 export default function PlayerView() {
   const [matches, setMatches] = useState([]);
@@ -62,9 +63,9 @@ export default function PlayerView() {
 
   return (
     <div className="mobile-container">
-      <header className="mobile-header">
-        <Trophy size={24} color="var(--text-primary)" />
-        <h1>Torneio BT</h1>
+      <header className="mobile-header" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <img src={logo} alt="Logo" style={{ height: 40, borderRadius: 8 }} />
+        <h1 style={{ margin: 0, fontSize: '1.2rem' }}>Careca's Club</h1>
       </header>
 
       <div className="mobile-search-bar">
