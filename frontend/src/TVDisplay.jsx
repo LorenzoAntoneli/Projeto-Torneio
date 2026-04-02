@@ -101,17 +101,19 @@ export default function TVDisplay() {
         const utterance = new SpeechSynthesisUtterance(phrase);
         utterance.lang = 'pt-BR';
         utterance.rate = 0.95;  // Ligeiramente mais lento para clareza
-        utterance.pitch = 1.05; // Tom um pouco mais vibrante
+        utterance.pitch = 1.1;  // Ajustado para um tom mais feminino e menos robótico
         
-        // Prioridade de vozes (Vozes Naturais conhecidas)
+        // Prioridade de vozes FEMININAS (Vozes Naturais conhecidas)
         const voices = synth.getVoices();
         const bestVoices = [
-            'Google português do Brasil',
             'Microsoft Francisca Online',
-            'Microsoft Antonio Online',
+            'Google português do Brasil',
+            'Microsoft Maria Online',
+            'Microsoft Heloisa Online',
             'Luciana', 
-            'Daniel',
-            'Maria'
+            'Maria',
+            'Heloisa',
+            'Vitoria'
         ];
         
         // Tenta encontrar a melhor voz disponível no sistema do usuário
