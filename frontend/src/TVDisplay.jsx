@@ -13,8 +13,7 @@ export default function TVDisplay() {
   const [currentSlide, setCurrentSlide] = useState(0); // 0: Geral, 1: Próximas, 2: Resultados
   const [sponsors, setSponsors] = useState([]);
   const [callQueue, setCallQueue] = useState([]);
-  const [voiceKey, setVoiceKey] = useState('');
-  const [elevenKey, setElevenKey] = useState(import.meta.env.VITE_ELEVENLABS_KEY || '');
+  const [voiceKey, setVoiceKey] = useState(import.meta.env.VITE_VOICERSS_KEY || '');
 
   const loadMatches = async (finishId = null) => {
     try {
@@ -62,10 +61,7 @@ export default function TVDisplay() {
     const { data } = await supabase.from('settings').select('*');
     if (data) {
       const vKey = data.find(s => s.id === 'voicerss_key')?.value;
-      const eKey = data.find(s => s.id === 'elevenlabs_key')?.value;
       if (vKey) setVoiceKey(vKey);
-      // Priorizar a chave vinda do banco de dados (que você salva no admin)
-      if (eKey) setElevenKey(eKey);
     }
   };
 
@@ -132,54 +128,16 @@ export default function TVDisplay() {
         // Frase direta e sem pontos excessivos (evita pular palavras)
         const speechText = `Atenção jogadores. Próximo jogo pela categoria ${cleanCat}. ${p1} contra ${p2}. Favor dirigir-se à ${court}.`;
 
-        if (elevenKey) {
-          try {
-            // Chamada Segura via Backend (Vercel API)
-            const voiceId = '21m00Tcm4TlvDq8ikWAM'; // Rachel
-            
-            const response = await fetch('/api/tts', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                text: speechText,
-                voiceId,
-                model_id: 'eleven_multilingual_v2'
-              })
-            });
-
-            if (response.ok) {
-              const blob = await response.blob();
-              const audioUrl = URL.createObjectURL(blob);
-              const audio = new Audio(audioUrl);
-              audio.onended = () => URL.revokeObjectURL(audioUrl);
-              audio.play().catch(e => console.error('Erro play backend:', e));
-            } else {
-              console.error('Erro no Proxy de Voz:', response.status);
-              // Fallback 1: Google TTS
-              const gUrl = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(speechText)}&tl=pt-br&client=tw-ob`;
-              const gAudio = new Audio(gUrl);
-              gAudio.play().catch(() => {
-                // Fallback 2: Voz Nativa do Navegador (Fim da linha)
-                const utterance = new SpeechSynthesisUtterance(speechText);
-                utterance.lang = 'pt-BR';
-                window.speechSynthesis.speak(utterance);
-              });
-            }
-          } catch (e) {
-            console.error('Erro de conexão com o Proxy de Voz:', e);
-            const utterance = new SpeechSynthesisUtterance(speechText);
-            utterance.lang = 'pt-BR';
-            window.speechSynthesis.speak(utterance);
-          }
-        } else {
-          // Sem chave configurada localmente, tenta Google por padrão
-          const gUrl = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(speechText)}&tl=pt-br&client=tw-ob`;
-          new Audio(gUrl).play().catch(() => {
-            const utterance = new SpeechSynthesisUtterance(speechText);
-            utterance.lang = 'pt-BR';
-            window.speechSynthesis.speak(utterance);
-          });
-        }
+        // Voz estável: Google TTS com fallback para Voz Nativa do Sistema
+        const gUrl = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(speechText)}&tl=pt-br&client=tw-ob`;
+        const audio = new Audio(gUrl);
+        audio.play().catch(() => {
+          console.warn('Google TTS bloqueado/falhou. Usando voz nativa do sistema...');
+          const utterance = new SpeechSynthesisUtterance(speechText);
+          utterance.lang = 'pt-BR';
+          utterance.rate = 1.0;
+          window.speechSynthesis.speak(utterance);
+        });
       }, 1000);
 
     } catch (e) { console.error('Erro áudio/voz:', e); }

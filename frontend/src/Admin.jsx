@@ -99,10 +99,10 @@ export default function Admin() {
   const createCategory = async () => { if (!selectedT || !newCName) return; await supabase.from('categories').insert([{ tournament_id: selectedT, name: newCName }]); setNewCName(''); loadData(); };
   const createCourt = async () => { if (!selectedT || !newCourtName) return; await supabase.from('courts').insert([{ tournament_id: selectedT, name: newCourtName }]); setNewCourtName(''); loadData(); };
   const createSponsor = async () => { if (!newSponsor.name || !newSponsor.logo_url) return; await supabase.from('sponsors').insert([newSponsor]); setNewSponsor({ name: '', logo_url: '' }); loadData(); };
-  const saveElevenKey = async () => {
-    if (!elevenKey) return;
-    const { error } = await supabase.from('settings').upsert({ id: 'elevenlabs_key', value: elevenKey });
-    if (error) alert(error.message); else alert('✅ Chave ElevenLabs salva!');
+  const saveVoiceKey = async () => {
+    if (!voiceKey) return;
+    const { error } = await supabase.from('settings').upsert({ id: 'voicerss_key', value: voiceKey });
+    if (error) alert(error.message); else alert('✅ Chave VoiceRSS salva!');
   };
 
   const deleteSponsor = async (id) => { if (!window.confirm('Excluir este patrocinador?')) return; await supabase.from('sponsors').delete().eq('id', id); loadData(); };
@@ -292,18 +292,23 @@ export default function Admin() {
                     <div className="app-card"><label className="input-label">Nova Categoria</label><div style={{ display: 'flex', gap: 10 }}><input value={newCName} onChange={e => setNewCName(e.target.value)} placeholder="Ex: Masculino A" style={{ marginBottom: 0 }} /><button onClick={createCategory} className="btn-primary" style={{ padding: '0 25px' }}><PlusCircle /></button></div></div>
                     <div className="app-card"><label className="input-label">Nova Quadra</label><div style={{ display: 'flex', gap: 10 }}><input value={newCourtName} onChange={e => setNewCourtName(e.target.value)} placeholder="Ex: Quadra 01" style={{ marginBottom: 0 }} /><button onClick={createCourt} className="btn-primary" style={{ padding: '0 25px' }}><MapPin /></button></div></div>
                     
-                    <div className="app-card" style={{ gridColumn: '1 / -1', border: '1px solid var(--accent-primary)' }}>
-                      <label className="input-label" style={{ color: 'var(--accent-primary)' }}>Módulo de Voz Profissional (ElevenLabs)</label>
-                      <p style={{ fontSize: '0.7rem', opacity: 0.5, marginBottom: 15 }}>Esta chave ativa a voz de locutora profissional que não erra nomes e não pula palavras.</p>
+                    <div className="app-card">
+                      <div className="card-header">
+                        <Volume2 size={20} color="var(--accent-primary)" />
+                        <h3>VoiceRSS (Opcional)</h3>
+                      </div>
+                      <p style={{ fontSize: '0.8rem', opacity: 0.7, marginBottom: 15 }}>
+                        Insira sua API Key do VoiceRSS se desejar vozes específicas.
+                      </p>
                       <div style={{ display: 'flex', gap: 10 }}>
                         <input 
                           type="password" 
-                          value={elevenKey} 
-                          onChange={e => setElevenKey(e.target.value)} 
-                          placeholder="Cole sua API Key aqui" 
-                          style={{ marginBottom: 0 }} 
+                          className="app-input" 
+                          placeholder="Cole sua API Key aqui..."
+                          value={voiceKey} 
+                          onChange={e => setVoiceKey(e.target.value)} 
                         />
-                        <button onClick={saveElevenKey} className="btn-primary" style={{ padding: '0 25px' }}>SALVAR CHAVE</button>
+                        <button onClick={saveVoiceKey} className="btn-primary" style={{ padding: '0 25px' }}>SALVAR CHAVE</button>
                       </div>
                     </div>
 
