@@ -14,6 +14,7 @@ export default function TVDisplay() {
   const [sponsors, setSponsors] = useState([]);
   const [callQueue, setCallQueue] = useState([]);
   const [voiceKey, setVoiceKey] = useState('');
+  const [elevenKey, setElevenKey] = useState(import.meta.env.VITE_ELEVENLABS_KEY || '');
 
   const loadMatches = async (finishId = null) => {
     try {
@@ -58,8 +59,13 @@ export default function TVDisplay() {
   };
 
   const loadSettings = async () => {
-    const { data } = await supabase.from('settings').select('*').eq('id', 'voicerss_key').single();
-    if (data) setVoiceKey(data.value);
+    const { data } = await supabase.from('settings').select('*');
+    if (data) {
+      const vKey = data.find(s => s.id === 'voicerss_key')?.value;
+      const eKey = data.find(s => s.id === 'elevenlabs_key')?.value;
+      if (vKey) setVoiceKey(vKey);
+      if (eKey && !elevenKey) setElevenKey(eKey);
+    }
   };
 
   useEffect(() => {
@@ -112,36 +118,56 @@ export default function TVDisplay() {
       playNote(659.25, audioCtx.currentTime + 0.15, 0.7); // Mi
 
       // 2. Anúncio da Dupla via IA Google (Nuvem)
-      setTimeout(() => {
+      // 2. Anúncio da Dupla via ElevenLabs (IA de Elite)
+      setTimeout(async () => {
         const p1 = match.pair1_name.replace('/', ' e ');
         const p2 = match.pair2_name.replace('/', ' e ');
         const court = match.court_name;
 
-        // Limpeza de categoria para pronúncia perfeita
-        let cat = (match.category_name || 'Geral')
-          .replace(/masc\.?/gi, 'Masculino')
-          .replace(/fem\.?/gi, 'Feminino')
-          .replace(/cat\.?/gi, 'Categoria')
-          .replace(/mista/gi, 'Mista');
-
-        // Correção fonética para o sobrenome do usuário
-        const p1Clean = p1.replace(/Antoneli/gi, 'Antonéli');
-        const p2Clean = p2.replace(/Antoneli/gi, 'Antonéli');
+        // Limpeza simples e eficaz para não confundir a IA
+        const cleanCat = (match.category_name || 'Geral')
+          .replace(/masc\.?/gi, 'Masculino').replace(/fem\.?/gi, 'Feminino');
         
-        // Frase final otimizada (Amazon Polly via VoiceRSS)
-        const finalPhrase = `Atenção jogadores!... Próximo jogo pela categoria ${cat}. . . ${p1Clean}... enfrenta... ${p2Clean}. . . Favor dirigir-se à ${court}. . . Repetindo: ${p1Clean} e ${p2Clean} na ${court}.`;
+        // Frase direta e sem pontos excessivos (evita pular palavras)
+        const speechText = `Atenção jogadores. Próximo jogo pela categoria ${cleanCat}. ${p1} contra ${p2}. Favor dirigir-se à ${court}.`;
 
-        if (voiceKey) {
-          // r=0 (velocidade normal), f=44khz_16bit_stereo (qualidade máxima), v=Camila (Amazon)
-          const url = `https://api.voicerss.org/?key=${voiceKey}&hl=pt-br&v=Camila&r=0&f=44khz_16bit_stereo&src=${encodeURIComponent(finalPhrase)}`;
-          const audio = new Audio(url);
-          audio.play().catch(e => {
-            console.error('Erro play VoiceRSS/Amazon:', e);
-            // Fallback final: voz local do navegador
-            const utterance = new SpeechSynthesisUtterance(finalPhrase);
-            utterance.lang = 'pt-BR';
-            window.speechSynthesis.speak(utterance);
-          });
+        if (elevenKey) {
+          try {
+            const voiceId = 'nPczCwiI2777P64pA684'; // Serene (Voz clara e imponente)
+            const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
+              method: 'POST',
+              headers: { 
+                'xi-api-key': elevenKey,
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                text: speechText,
+                model_id: 'eleven_multilingual_v2',
+                voice_settings: { stability: 0.5, similarity_boost: 0.75 }
+              })
+            });
+
+            if (response.ok) {
+              const blob = await response.blob();
+              const audioUrl = URL.createObjectURL(blob);
+              const audio = new Audio(audioUrl);
+              audio.play().catch(e => console.error('Erro play ElevenLabs:', e));
+            } else {
+              console.error('Erro na API ElevenLabs:', response.status);
+              // Fallback se a cota acabar
+              const gUrl = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(speechText)}&tl=pt-br&client=tw-ob`;
+              new Audio(gUrl).play();
+            }
+          } catch (e) {
+            console.error('Erro de conexão ElevenLabs:', e);
+            // Fallback para Google em erro de rede
+            const gUrl = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(speechText)}&tl=pt-br&client=tw-ob`;
+            new Audio(gUrl).play();
+          }
+        } else {
+          // Fallback para Google se não houver chave
+          const gUrl = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(speechText)}&tl=pt-br&client=tw-ob`;
+          new Audio(gUrl).play();
         }
       }, 1000);
 
