@@ -127,14 +127,15 @@ export default function TVDisplay() {
         // Frase otimizada para o Google Tradutor (Máxima clareza)
         const phrase = `Atenção jogadores!... Próximo jogo pela categoria ${cat}. . . ${p1}... contra... ${p2}. . . Favor dirigir-se à ${court}. . . Repetindo: ${p1} e ${p2} na ${court}.`;
 
-        // IA Google
-        const gPhrase = phrase.replace(/\.\.\./g, '. ');
-        const url = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(gPhrase)}&tl=pt-br&client=tw-ob`;
+        // Motor Profissional: Amazon Polly (Vitoria) via StreamElements
+        // Esta voz é muito superior em clareza e pronúncia de nomes
+        const sPhrase = phrase.replace(/\. \. \./g, '. '); // Ajuste de pausas para Polly
+        const url = `https://api.streamelements.com/v2/channels/5f1489725f46a2542a033221/tts?voice=Vitoria&text=${encodeURIComponent(sPhrase)}`;
         
         const audio = new Audio(url);
         audio.play().catch(e => {
-          console.error('Erro play Google Voice:', e);
-          // Fallback final: voz local do navegador se o Google falhar
+          console.error('Erro play Amazon Polly:', e);
+          // Fallback final: voz local do navegador se a nuvem falhar
           const utterance = new SpeechSynthesisUtterance(phrase);
           utterance.lang = 'pt-BR';
           window.speechSynthesis.speak(utterance);
