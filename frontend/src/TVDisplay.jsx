@@ -134,23 +134,16 @@ export default function TVDisplay() {
 
         if (elevenKey) {
           try {
-            // Voice ID atualizado para 'Rachel' (Estável e Profissional)
-            // Outras opções: 'pNIn79O7S7GWmkh8p3DG' (Adam), 'EXAVITQu4vr4xnSDxMaL' (Bella)
-            // Voz da Rachel (Brasileira/Multilingual) e modelo v2 estável
-            const voiceId = '21m00Tcm4TlvDq8ikWAM'; 
-            const finalKey = elevenKey.trim() || 'sk_403196c95ce0c62fec7cf85d72eb77dc05becd3b4565fce4';
+            // Chamada Segura via Backend (Vercel API)
+            const voiceId = '21m00Tcm4TlvDq8ikWAM'; // Rachel
             
-            const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
+            const response = await fetch('/api/tts', {
               method: 'POST',
-              headers: { 
-                'Accept': 'audio/mpeg',
-                'Content-Type': 'application/json',
-                'xi-api-key': finalKey
-              },
+              headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
                 text: speechText,
-                model_id: 'eleven_multilingual_v2',
-                voice_settings: { stability: 0.5, similarity_boost: 0.75 }
+                voiceId,
+                model_id: 'eleven_multilingual_v2'
               })
             });
 
@@ -158,38 +151,34 @@ export default function TVDisplay() {
               const blob = await response.blob();
               const audioUrl = URL.createObjectURL(blob);
               const audio = new Audio(audioUrl);
-              audio.onended = () => URL.revokeObjectURL(audioUrl); // Limpeza de memória
-              audio.play().catch(e => console.error('Erro play ElevenLabs:', e));
+              audio.onended = () => URL.revokeObjectURL(audioUrl);
+              audio.play().catch(e => console.error('Erro play backend:', e));
             } else {
-              const errorData = await response.json().catch(() => ({}));
-              console.error('Erro ElevenLabs:', response.status, errorData);
-
+              console.error('Erro no Proxy de Voz:', response.status);
               // Fallback 1: Google TTS
-              try {
-                const gUrl = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(speechText)}&tl=pt-br&client=tw-ob`;
-                const gAudio = new Audio(gUrl);
-                gAudio.play().catch(() => {
-                  // Fallback 2: Voz Nativa do Navegador (Fim da linha)
-                  const utterance = new SpeechSynthesisUtterance(speechText);
-                  utterance.lang = 'pt-BR';
-                  window.speechSynthesis.speak(utterance);
-                });
-              } catch (e) {
+              const gUrl = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(speechText)}&tl=pt-br&client=tw-ob`;
+              const gAudio = new Audio(gUrl);
+              gAudio.play().catch(() => {
+                // Fallback 2: Voz Nativa do Navegador (Fim da linha)
                 const utterance = new SpeechSynthesisUtterance(speechText);
                 utterance.lang = 'pt-BR';
                 window.speechSynthesis.speak(utterance);
-              }
+              });
             }
           } catch (e) {
-            console.error('Erro de conexão ElevenLabs:', e);
+            console.error('Erro de conexão com o Proxy de Voz:', e);
             const utterance = new SpeechSynthesisUtterance(speechText);
             utterance.lang = 'pt-BR';
             window.speechSynthesis.speak(utterance);
           }
         } else {
-          // Fallback para Google se não houver chave
+          // Sem chave configurada localmente, tenta Google por padrão
           const gUrl = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(speechText)}&tl=pt-br&client=tw-ob`;
-          new Audio(gUrl).play();
+          new Audio(gUrl).play().catch(() => {
+            const utterance = new SpeechSynthesisUtterance(speechText);
+            utterance.lang = 'pt-BR';
+            window.speechSynthesis.speak(utterance);
+          });
         }
       }, 1000);
 
