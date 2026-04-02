@@ -185,26 +185,30 @@ export default function TVDisplay() {
     .sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
 
   return (
-    <div className="tv-container" style={{ background: '#000', height: '100vh', color: '#fff', padding: '20px 40px', display: 'flex', flexDirection: 'column', overflow: 'hidden', position: 'relative', fontFamily: 'system-ui, sans-serif' }}>
+    <div className="tv-container" style={{ background: '#000', height: '100vh', color: '#fff', padding: '30px 50px', display: 'flex', flexDirection: 'column', overflow: 'hidden', position: 'relative', fontFamily: 'system-ui, sans-serif' }}>
 
-      {/* HEADER PREMIUM (FOCO MÁXIMO NA LOGO) */}
-      <header style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: 20, paddingBottom: 20, borderBottom: '2px solid rgba(212,175,55,0.1)', background: '#000', flexShrink: 0 }}>
-        <img src={logo} alt="Careca's Logo" style={{ height: 320, objectFit: 'contain', filter: 'drop-shadow(0 0 30px rgba(212,175,55,0.2))' }} />
-        
-        <div style={{ position: 'absolute', top: 10, right: 10, textAlign: 'right' }}>
-          <div style={{ fontSize: '3rem', fontWeight: 900, color: 'var(--accent-primary)', letterSpacing: 2 }}>{currentTime}</div>
+      {/* HEADER CLÁSSICO (RESTAURADO) */}
+      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 40, paddingBottom: 25, borderBottom: '1px solid rgba(212,175,55,0.2)', background: '#000', flexShrink: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 30 }}>
+          <img src={logo} alt="Logo" style={{ height: 160, objectFit: 'contain' }} />
+          <div>
+            <h1 style={{ fontSize: '3.2rem', fontWeight: 950, color: 'var(--accent-primary)', textTransform: 'uppercase', margin: 0, letterSpacing: 2 }}>CARECA’S BEACH CLUB</h1>
+            <div style={{ display: 'flex', gap: 15, alignItems: 'center', marginTop: 5 }}>
+              <span style={{ letterSpacing: 5, opacity: 0.5, fontSize: '0.8rem' }}>Torneio em Tempo Real</span>
+              <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#2ecc71', boxShadow: '0 0 10px #2ecc71' }}></div>
+              <span style={{ fontSize: '0.6rem', opacity: 0.3, textTransform: 'uppercase' }}>
+                {currentSlide === 0 ? "Geral" : currentSlide === 1 ? "Próximas" : currentSlide === 2 ? "Resultados" : "Patrocinadores"}
+              </span>
+            </div>
+          </div>
         </div>
-
-        <div style={{ display: 'flex', gap: 20, alignItems: 'center', marginTop: 15 }}>
-          <div style={{ width: 12, height: 12, borderRadius: '50%', background: '#2ecc71', boxShadow: '0 0 15px #2ecc71' }}></div>
-          <span style={{ letterSpacing: 10, fontSize: '1rem', opacity: 0.5, fontWeight: 900, textTransform: 'uppercase' }}>
-            AO VIVO - {currentSlide === 0 ? "Painel Geral" : currentSlide === 1 ? "Próximas Partidas" : currentSlide === 2 ? "Resultados" : "Patrocinadores"}
-          </span>
+        <div style={{ textAlign: 'right' }}>
+          <div style={{ fontSize: '3.5rem', fontWeight: 900, color: '#fff' }}>{currentTime}</div>
         </div>
       </header>
 
       {/* ÁREA DE SLIDES (FLEX GROW) */}
-      <div style={{ position: 'relative', flex: 1, overflow: 'hidden', transition: 'opacity 2s ease-in-out', marginBottom: 20 }}>
+      <div style={{ position: 'relative', flex: 1, overflow: 'hidden', transition: 'opacity 2s ease-in-out', marginBottom: 30 }}>
 
         {/* SLIDE 0: PAINEL GERAL (A visão original) */}
         {currentSlide === 0 && (
@@ -346,12 +350,12 @@ export default function TVDisplay() {
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
         
-        .ticker-wrap { width: 100%; height: 180px; background: #000; border-top: 2px solid var(--accent-primary); overflow: hidden; display: flex; flex-direction: column; justify-content: center; padding: 10px 0; flex-shrink: 0; }
-        .ticker-label { color: var(--accent-primary); font-size: 1.2rem; font-weight: 900; letter-spacing: 5px; text-transform: uppercase; margin-bottom: 20px; opacity: 0.8; }
+        .ticker-wrap { width: 100%; height: 150px; background: #000; border-top: 1px solid rgba(212,175,55,0.3); overflow: hidden; display: flex; flex-direction: column; justify-content: center; padding: 10px 0; flex-shrink: 0; }
+        .ticker-label { color: var(--accent-primary); font-size: 1rem; font-weight: 900; letter-spacing: 3px; text-transform: uppercase; margin-bottom: 10px; padding-left: 20px; opacity: 0.6; }
         .ticker { display: flex; white-space: nowrap; animation: scroll-ticker 30s linear infinite; }
-        .ticker-item { display: flex; align-items: center; gap: 20px; margin-right: 120px; }
-        .ticker-item img { height: 100px; width: auto; object-fit: contain; filter: drop-shadow(0 0 10px rgba(255,255,255,0.1)); }
-        .ticker-item span { color: #fff; font-size: 1.5rem; font-weight: 900; letter-spacing: 2px; text-transform: uppercase; opacity: 0.8; }
+        .ticker-item { display: flex; align-items: center; gap: 15px; margin-right: 100px; }
+        .ticker-item img { height: 70px; width: auto; object-fit: contain; }
+        .ticker-item span { color: #fff; font-size: 1.2rem; font-weight: 900; letter-spacing: 1px; text-transform: uppercase; opacity: 0.7; }
         
         @keyframes scroll-ticker {
           0% { transform: translateX(0); }
