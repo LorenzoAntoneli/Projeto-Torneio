@@ -165,7 +165,6 @@ export default function Admin() {
         {/* LOGO MOBILE */}
         <div className="mobile-admin-logo">
           <img src={logo} alt="Logo" />
-          <span>CARECA'S CLUB</span>
         </div>
 
         {activeTab === 'scoreboard' && (
