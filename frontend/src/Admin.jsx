@@ -43,11 +43,16 @@ export default function Admin() {
   const [editTime, setEditTime] = useState('');
 
   // Bracket/Groups States
-  const [previewGroups, setPreviewGroups] = useState([]);
-  const [groupSize, setGroupSize] = useState(3);
   const [isGenerating, setIsGenerating] = useState(false);
   const [groupType, setGroupType] = useState('auto'); // 'auto' ou 'manual'
   const [manualSlots, setManualSlots] = useState({}); // { 'A1': pairId, 'A2': pairId... }
+  
+  // Configurações Dinâmicas (Vem do Torneio Selecionado)
+  const [tournamentSettings, setTournamentSettings] = useState({
+    max_pairs: 15,
+    num_groups: 4,
+    classify_per_group: 2
+  });
 
   // Persistent TV Channel para Broadcasts instantâneos
   const [tvChannel, setTvChannel] = useState(null);
@@ -102,7 +107,22 @@ export default function Admin() {
           } catch(e) {}
         }
       }
+      if (selectedT) {
+        const currentT = tData.find(t => t.id === selectedT);
+        if (currentT && currentT.settings) {
+          setTournamentSettings(typeof currentT.settings === 'string' ? JSON.parse(currentT.settings) : currentT.settings);
+        } else {
+          setTournamentSettings({ max_pairs: 15, num_groups: 4, classify_per_group: 2 });
+        }
+      }
     } catch (e) { console.error("Erro no carregamento:", e); }
+  };
+
+  const saveTournamentSettings = async () => {
+    if (!selectedT) return alert('Selecione um torneio!');
+    const { error } = await supabase.from('tournaments').update({ settings: tournamentSettings }).eq('id', selectedT);
+    if (error) alert('Erro ao salvar: ' + error.message);
+    else { alert('✅ Regras do Torneio Salvas!'); loadData(); }
   };
 
   useEffect(() => { if (session) loadData(); }, [session, selectedT, selectedC]);
@@ -333,17 +353,20 @@ export default function Admin() {
     const categoryPairs = pairs.filter(p => p.category_id === selectedC);
     if (categoryPairs.length < 2) return alert('Necessário ao menos 2 duplas nesta categoria!');
 
-    const size = Math.min(categoryPairs.length, 12);
-    const shuffled = [...categoryPairs.slice(0, size)].sort(() => Math.random() - 0.5);
+    const { max_pairs, num_groups } = tournamentSettings;
+    const shuffled = [...categoryPairs.slice(0, max_pairs)].sort(() => Math.random() - 0.5);
     
-    const countPerGroup = Number(groupSize);
-    const numGroups = Math.ceil(shuffled.length / countPerGroup);
     const newSlots = {};
-    
     let pairIdx = 0;
-    for (let g = 0; g < numGroups; g++) {
+
+    // Distribuição balanceada ex: 10 duplas em 4 grupos -> 3,3,2,2
+    const baseCount = Math.floor(shuffled.length / num_groups);
+    const extraCount = shuffled.length % num_groups;
+
+    for (let g = 0; g < num_groups; g++) {
       const letter = String.fromCharCode(65 + g);
-      for (let s = 1; s <= countPerGroup; s++) {
+      const slotsInThisGroup = baseCount + (g < extraCount ? 1 : 0);
+      for (let s = 1; s <= slotsInThisGroup; s++) {
         if (pairIdx < shuffled.length) {
           newSlots[`${letter}${s}`] = shuffled[pairIdx].id;
           pairIdx++;
@@ -351,7 +374,7 @@ export default function Admin() {
       }
     }
     setManualSlots(newSlots);
-    setGroupType('manual'); // Mostra a interface de slots preenchida
+    setGroupType('manual');
   };
 
   const saveGroups = async () => {
@@ -563,7 +586,6 @@ export default function Admin() {
 
             <div className="app-card" style={{ borderLeftColor: 'var(--accent-primary)', marginBottom: 30 }}>
               <h2 style={{ fontSize: '1.2rem', marginBottom: 15, color: 'var(--accent-primary)', fontWeight: 800 }}>Controle Automático ou Manual da TV</h2>
-              
               <label className="input-label">Modo de Exibição / Tela Fixa</label>
               <select value={tvMode} onChange={e => setTvMode(e.target.value)} style={{ marginBottom: 15 }}>
                 <option value="auto">Automático (Rotacionar todas)</option>
@@ -573,43 +595,52 @@ export default function Admin() {
                 <option value="3">Fixo: Patrocinadores</option>
                 <option value="4">Fixo: Chaveamento (Mata-Mata)</option>
               </select>
-
               <label className="input-label">Tempo do Slide (segundos)</label>
               <input type="number" value={tvTime} onChange={e => setTvTime(e.target.value)} placeholder="Ex: 30" style={{ marginBottom: 20 }} />
-
               <button className="btn-primary" style={{ width: '100%', height: 50, marginTop: 10, fontWeight: 900 }} onClick={saveTvSettings}>APLICAR NA TV AGORA</button>
             </div>
 
             <div className="app-card"><label className="input-label">Novo Torneio</label><input value={newTName} onChange={e => setNewTName(e.target.value)} placeholder="Ex: Open Verão" /><button onClick={createTournament} className="btn-primary" style={{ width: '100%', height: 55 }}>Salvar Evento</button></div>
+            
             {tournaments.length > 0 && (
-              <>
+              <div style={{ marginTop: 20 }}>
                 <div className="app-card"><label className="input-label">Selecionar Torneio</label><select value={selectedT} onChange={e => setSelectedT(e.target.value)}><option value="">Escolha...</option>{tournaments.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}</select></div>
                 {selectedT && (
                   <div style={{ display: 'grid', gap: 20 }}>
+                     <div className="app-card" style={{ border: '1px solid #D4AF37', background: 'rgba(212,175,55,0.05)' }}>
+                        <h2 style={{ fontSize: '1.2rem', marginBottom: 20, color: '#D4AF37', fontWeight: 900, textAlign: 'center' }}>⚙️ REGRAS DO TORNEIO (EDITAR)</h2>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 15, marginBottom: 25 }}>
+                          <div><label className="input-label" style={{ fontSize: '0.65rem' }}>Máx Duplas/Cat</label><input type="number" value={tournamentSettings.max_pairs} onChange={e => setTournamentSettings({...tournamentSettings, max_pairs: Number(e.target.value)})} style={{ marginBottom: 0 }} /></div>
+                          <div><label className="input-label" style={{ fontSize: '0.65rem' }}>Nº de Grupos</label><input type="number" value={tournamentSettings.num_groups} onChange={e => setTournamentSettings({...tournamentSettings, num_groups: Number(e.target.value)})} style={{ marginBottom: 0 }} /></div>
+                          <div><label className="input-label" style={{ fontSize: '0.65rem' }}>Classificados</label><input type="number" value={tournamentSettings.classify_per_group} onChange={e => setTournamentSettings({...tournamentSettings, classify_per_group: Number(e.target.value)})} style={{ marginBottom: 0 }} /></div>
+                        </div>
+                        <button className="btn-primary" style={{ width: '100%', height: 60, background: '#D4AF37', color: '#000', fontWeight: 900 }} onClick={saveTournamentSettings}>SALVAR REGRAS DO EVENTO</button>
+                        <p style={{ fontSize: '0.6rem', opacity: 0.5, marginTop: 15, textAlign: 'center' }}>Essas regras serão aplicadas automaticamente em todas as categorias deste torneio.</p>
+                     </div>
+
                     <div className="app-card"><label className="input-label">Nova Categoria</label><div style={{ display: 'flex', gap: 10 }}><input value={newCName} onChange={e => setNewCName(e.target.value)} placeholder="Ex: Masculino A" style={{ marginBottom: 0 }} /><button onClick={createCategory} className="btn-primary" style={{ padding: '0 25px' }}><PlusCircle /></button></div></div>
                     <div className="app-card"><label className="input-label">Nova Quadra</label><div style={{ display: 'flex', gap: 10 }}><input value={newCourtName} onChange={e => setNewCourtName(e.target.value)} placeholder="Ex: Quadra 01" style={{ marginBottom: 0 }} /><button onClick={createCourt} className="btn-primary" style={{ padding: '0 25px' }}><MapPin /></button></div></div>
                     
-
                     <div className="app-card" style={{ gridColumn: '1 / -1' }}>
                       <label className="input-label">Patrocinadores (Logos)</label>
                       <div style={{ display: 'flex', gap: 10, marginBottom: 20 }}>
-                        <input value={newSponsor.name} onChange={e => setNewSponsor({...newSponsor, name: e.target.value})} placeholder="Nome da Marca" style={{ marginBottom: 0 }} />
-                        <input value={newSponsor.logo_url} onChange={e => setNewSponsor({...newSponsor, logo_url: e.target.value})} placeholder="URL da Logo (PNG ou JPG)" style={{ marginBottom: 0 }} />
+                        <input value={newSponsor.name} onChange={e => setNewSponsor({...newSponsor, name: e.target.value})} placeholder="Marca" style={{ marginBottom: 0 }} />
+                        <input value={newSponsor.logo_url} onChange={e => setNewSponsor({...newSponsor, logo_url: e.target.value})} placeholder="URL Logo" style={{ marginBottom: 0 }} />
                         <button onClick={createSponsor} className="btn-primary" style={{ padding: '0 25px' }}><PlusCircle /></button>
                       </div>
                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: 15 }}>
                         {sponsors.map(s => (
-                          <div key={s.id} style={{ background: 'rgba(255,255,255,0.03)', padding: 10, borderRadius: 12, border: '1px solid rgba(255,255,255,0.1)', textAlign: 'center', position: 'relative' }}>
-                            <img src={s.logo_url} alt={s.name} style={{ width: '100%', height: 40, objectFit: 'contain', marginBottom: 5 }} />
-                            <div style={{ fontSize: '0.6rem', opacity: 0.5, whiteSpace: 'nowrap', overflow: 'hidden' }}>{s.name}</div>
-                            <button onClick={() => deleteSponsor(s.id)} style={{ position: 'absolute', top: -5, right: -5, background: '#ff4d4d', color: '#fff', border: 'none', borderRadius: '50%', width: 20, height: 20, fontSize: 10, cursor: 'pointer' }}>X</button>
+                          <div key={s.id} style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 12, padding: 10, border: '1px solid #333', position: 'relative' }}>
+                            <img src={s.logo_url} alt={s.name} style={{ width: '100%', height: 60, objectFit: 'contain', marginBottom: 5 }} />
+                            <div style={{ fontSize: '0.6rem', textAlign: 'center', opacity: 0.5 }}>{s.name}</div>
+                            <button onClick={async () => { await supabase.from('sponsors').delete().eq('id', s.id); loadData(); }} style={{ position: 'absolute', top: 5, right: 5, background: 'red', borderRadius: '50%', width: 20, height: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '10px', border: 'none' }}>×</button>
                           </div>
                         ))}
                       </div>
                     </div>
                   </div>
                 )}
-              </>
+              </div>
             )}
           </div>
         )}
@@ -620,16 +651,24 @@ export default function Admin() {
             <div className="app-card">
               <label className="input-label">Torneio e Categoria</label>
               <div style={{ display: 'grid', gap: 10, marginBottom: 20 }}><select value={selectedT} onChange={e => setSelectedT(e.target.value)} style={{ marginBottom: 0 }}><option value="">Torneio...</option>{tournaments.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}</select><select value={selectedC} onChange={e => setSelectedC(e.target.value)} style={{ marginBottom: 0 }}><option value="">Categoria...</option>{categories.filter(c => c.tournament_id === selectedT).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></div>
-              {selectedC && <><label className="input-label">Nomes dos Atletas</label><input placeholder="Atleta 1" value={atleta1} onChange={e => setAtleta1(e.target.value)} /><input placeholder="Atleta 2" value={atleta2} onChange={e => setAtleta2(e.target.value)} /><button onClick={createPair} className="btn-primary" style={{ width: '100%', height: 55 }}>REGISTRAR DUPLA</button></>}
+              {selectedC && (
+                <div style={{ display: 'grid', gap: 10 }}>
+                  <label className="input-label">Nomes dos Atletas</label>
+                  <input placeholder="Atleta 1" value={atleta1} onChange={e => setAtleta1(e.target.value)} />
+                  <input placeholder="Atleta 2" value={atleta2} onChange={e => setAtleta2(e.target.value)} />
+                  <button onClick={createPair} className="btn-primary" style={{ width: '100%', height: 55 }}>REGISTRAR DUPLA</button>
+                </div>
+              )}
             </div>
           </div>
         )}
 
         {activeTab === 'brackets' && (
-          <div style={{ maxWidth: 800, margin: '0 auto' }}>
-            <h1 className="section-title">Chaveamento (Fase de Grupos)</h1>
+          <div style={{ maxWidth: 800, margin: '0 auto', paddingBottom: 100 }}>
+            <h1 className="section-title">Chaveamento do Torneio</h1>
+            
             <div className="app-card" style={{ marginBottom: 30 }}>
-              <label className="input-label">1. Selecione o Evento</label>
+              <label className="input-label">1. Selecione a Categoria</label>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 15, marginBottom: 20 }}>
                 <select value={selectedT} onChange={e => setSelectedT(e.target.value)}>
                   <option value="">Torneio...</option>
@@ -641,127 +680,85 @@ export default function Admin() {
                 </select>
               </div>
 
-              {selectedC && (
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
-                  <div className="app-card" style={{ background: 'rgba(255,255,255,0.01)', border: '1px dashed #333' }}>
-                    <label className="input-label">Opção A: Fase de Grupos</label>
-                    <div style={{ display: 'flex', gap: 15, alignItems: 'center', marginBottom: 20 }}>
-                      <select value={groupSize} onChange={e => setGroupSize(e.target.value)} style={{ width: 100, marginBottom: 0 }}>
-                        <option value="3">3 duplas</option>
-                        <option value="4">4 duplas</option>
-                        <option value="5">5 duplas</option>
-                      </select>
-                      <button className="btn-primary" style={{ flex: 1, height: 45, marginBottom: 0, background: 'rgba(255,255,255,0.1)' }} onClick={generateGroups}>SORTEAR GRUPOS</button>
-                    </div>
-                  </div>
-
-                  <div className="app-card" style={{ background: 'rgba(255,255,255,0.01)', border: '1px dashed #D4AF37' }}>
-                    <label className="input-label">Opção B: Mata-Mata Direto</label>
-                    <div style={{ display: 'flex', gap: 15, alignItems: 'center' }}>
-                       <input type="number" value={bracketSize} onChange={e => setBracketSize(e.target.value)} placeholder="Ex: 8" style={{ width: 100, marginBottom: 0 }} />
-                       <button className="btn-primary" style={{ flex: 1, height: 45, marginBottom: 0 }} onClick={generateManualBracket}>GERAR CHAVE MATA-MATA</button>
-                    </div>
-                    <p style={{ fontSize: '0.6rem', opacity: 0.5, marginTop: 10 }}>* Use 4, 8, 16 ou 32 para chaves perfeitas.</p>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {selectedC && (
-              <div style={{ marginTop: 20 }}>
-                 <div style={{ display: 'flex', gap: 10, marginBottom: 20 }}>
-                    <button className={`btn-primary ${groupType === 'manual' ? 'active' : ''}`} style={{ flex: 1, background: groupType === 'manual' ? 'var(--accent-primary)' : 'rgba(255,255,255,0.05)', color: groupType === 'manual' ? '#000' : '#fff' }} onClick={() => setGroupType('manual')}>MONTAR MANUAL</button>
-                    <button className="btn-primary" style={{ flex: 1, border: '1px solid var(--accent-primary)', background: 'transparent' }} onClick={generateGroups}>SORTEAR TUDO (RANDOM)</button>
-                 </div>
-
-                 {/* GRID DE SLOTS RESPONSIVO */}
-                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 20 }}>
-                    {['A', 'B', 'C', 'D'].map(letter => {
-                       const categoryPairs = pairs.filter(p => p.category_id === selectedC);
-                       return (
-                         <div key={letter} className="app-card" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid #333' }}>
-                            <h3 style={{ fontSize: '0.9rem', color: 'var(--accent-primary)', marginBottom: 15, textAlign: 'center' }}>GRUPO {letter}</h3>
-                            {[1, 2, 3, 4, 5].slice(0, groupSize).map(slotNum => {
-                               const slotKey = `${letter}${slotNum}`;
-                               return (
-                                 <div key={slotKey} style={{ marginBottom: 10 }}>
-                                    <select 
-                                      value={manualSlots[slotKey] || ''} 
-                                      onChange={e => setManualSlots({...manualSlots, [slotKey]: e.target.value})}
-                                      style={{ fontSize: '0.8rem', padding: '10px' }}
-                                    >
-                                       <option value="">-- Selecionar Dupla --</option>
-                                       {categoryPairs.map(p => {
-                                          // Desabilita se já estiver em outro slot
-                                          const isTaken = Object.values(manualSlots).includes(p.id) && manualSlots[slotKey] !== p.id;
-                                          return <option key={p.id} value={p.id} disabled={isTaken}>{p.name} {isTaken ? '(Já escalada)' : ''}</option>
-                                       })}
-                                    </select>
-                                 </div>
-                               );
-                            })}
-                         </div>
-                       )
-                    })}
-                 </div>
-
-                 <button className="btn-primary" style={{ width: '100%', height: 60, marginTop: 30, fontSize: '1rem', fontWeight: 900 }} onClick={saveGroups} disabled={isGenerating}>
-                    {isGenerating ? 'SALVANDO...' : 'OFICIALIZAR GRUPOS E CRIAR JOGOS'}
-                 </button>
-              </div>
-            )}
-
-
-            <div style={{ marginTop: 40, background: 'rgba(0,0,0,0.3)', padding: 30, borderRadius: 20, border: '1px solid #222' }}>
-               <h2 style={{ fontSize: '1rem', color: 'var(--accent-primary)', marginBottom: 30, textAlign: 'center', letterSpacing: 2 }}>VISUALIZAÇÃO DA CHAVE</h2>
-               <div style={{ display: 'flex', gap: 40, justifyContent: 'center', overflowX: 'auto', padding: 20 }}>
-                  {/* Visualização simplificada das rodadas no Admin */}
-                  {['Oitavas de Final', 'Quartas de Final', 'Semifinal', 'Final'].map(round => {
-                    const roundMatches = matches.filter(m => m.category_id === selectedC && m.stage === round);
-                    if (roundMatches.length === 0) return null;
-                    return (
-                      <div key={round} style={{ minWidth: 200 }}>
-                        <div style={{ fontSize: '0.6rem', opacity: 0.4, textAlign: 'center', marginBottom: 15, fontWeight: 900 }}>{round.toUpperCase()}</div>
-                        <div style={{ display: 'grid', gap: 20 }}>
-                           {roundMatches.sort((a,b) => a.id.localeCompare(b.id)).map(m => (
-                             <div key={m.id} style={{ background: '#111', padding: 10, borderRadius: 8, border: '1px solid #333', fontSize: '0.7rem' }}>
-                                <div style={{ borderBottom: '1px solid #222', paddingBottom: 5, marginBottom: 5, color: m.pair1_id ? '#fff' : '#444' }}>{m.pair1?.name || 'Aguardando...'}</div>
-                                <div style={{ color: m.pair2_id ? '#fff' : '#444' }}>{m.pair2?.name || 'Aguardando...'}</div>
-                             </div>
-                           ))}
+                {selectedC && (
+                  <>
+                    <div style={{ background: 'rgba(255,255,255,0.03)', padding: 20, borderRadius: 15, border: '1px solid #333' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 15, marginBottom: 20 }}>
+                        <div style={{ textAlign: 'center', padding: 10, background: 'rgba(255,255,255,0.02)', borderRadius: 10 }}>
+                          <div style={{ fontSize: '0.6rem', opacity: 0.5 }}>LIMITE CATEGORIA</div>
+                          <div style={{ fontWeight: 900, color: 'var(--accent-primary)' }}>{tournamentSettings.max_pairs} DUPLAS</div>
+                        </div>
+                        <div style={{ textAlign: 'center', padding: 10, background: 'rgba(255,255,255,0.02)', borderRadius: 10 }}>
+                          <div style={{ fontSize: '0.6rem', opacity: 0.5 }}>GRUPOS</div>
+                          <div style={{ fontWeight: 900, color: '#fff' }}>{tournamentSettings.num_groups}</div>
+                        </div>
+                        <div style={{ textAlign: 'center', padding: 10, background: 'rgba(255,255,255,0.02)', borderRadius: 10 }}>
+                          <div style={{ fontSize: '0.6rem', opacity: 0.5 }}>CLASSIFICAÇÃO</div>
+                          <div style={{ fontWeight: 900, color: '#D4AF37' }}>{tournamentSettings.classify_per_group} POR GRUPO</div>
                         </div>
                       </div>
-                    );
-                  })}
-               </div>
-            </div>
-
-            {previewGroups.length > 0 && (
-              <div className="fade-in">
-                <h2 style={{ fontSize: '1rem', color: 'var(--accent-primary)', marginBottom: 20, textAlign: 'center', letterSpacing: 2 }}>PRÉVIA DOS GRUPOS</h2>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: 20, marginBottom: 40 }}>
-                  {previewGroups.map((group, gIdx) => (
-                    <div key={gIdx} className="app-card" style={{ borderTop: '4px solid var(--accent-primary)', background: 'rgba(255,255,255,0.02)' }}>
-                      <h3 style={{ fontSize: '0.9rem', marginBottom: 15, textAlign: 'center', fontWeight: 900 }}>{group.name}</h3>
-                      <div style={{ display: 'grid', gap: 8 }}>
-                        {group.pairs.map((p, pIdx) => (
-                          <div key={pIdx} style={{ fontSize: '0.8rem', padding: '8px 12px', background: 'rgba(255,255,255,0.05)', borderRadius: 8 }}>
-                            {p.name}
-                          </div>
-                        ))}
+                      <div style={{ display: 'flex', gap: 10 }}>
+                        <button className="btn-primary" style={{ flex: 1, height: 50, fontSize: '0.8rem', background: groupType === 'manual' ? 'var(--accent-primary)' : 'rgba(255,255,255,0.05)', color: groupType === 'manual' ? '#000' : '#fff' }} onClick={() => setGroupType('manual')}>MONTAR MANUAL</button>
+                        <button className="btn-primary" style={{ flex: 1, height: 50, fontSize: '0.8rem', border: '1px solid var(--accent-primary)', background: 'transparent', color: 'var(--accent-primary)' }} onClick={generateGroups}>SORTEIO ALEATÓRIO</button>
                       </div>
                     </div>
-                  ))}
-                </div>
+                  </>
+                )}
+              </div>
+
+              {selectedC && (
+                <>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 20, marginBottom: 40 }}>
+                    {Array.from({ length: tournamentSettings.num_groups }).map((_, gIdx) => {
+                      const letter = String.fromCharCode(65 + gIdx);
+                      const categoryPairs = pairs.filter(p => p.category_id === selectedC);
+                      // Calcula quantos slots mostrar: máximo que cabe dada as duplas OU as regras
+                      const maxSlotsPossible = Math.ceil(tournamentSettings.max_pairs / tournamentSettings.num_groups);
+                      return (
+                        <div key={letter} className="app-card" style={{ border: '1px solid #333', background: 'rgba(0,0,0,0.2)' }}>
+                          <h3 style={{ fontSize: '0.9rem', color: 'var(--accent-primary)', marginBottom: 15, textAlign: 'center', letterSpacing: 2 }}>GRUPO {letter}</h3>
+                          {Array.from({ length: maxSlotsPossible }).map((_, sIdx) => {
+                            const slotNum = sIdx + 1;
+                            const slotKey = `${letter}${slotNum}`;
+                            return (
+                              <div key={slotKey} style={{ marginBottom: 10 }}>
+                                <select 
+                                  value={manualSlots[slotKey] || ''} 
+                                  onChange={e => setManualSlots({...manualSlots, [slotKey]: e.target.value})}
+                                  style={{ fontSize: '0.75rem', padding: '10px' }}
+                                >
+                                  <option value="">-- Slot {slotNum} --</option>
+                                  {categoryPairs.map(p => {
+                                    const isTaken = Object.values(manualSlots).includes(p.id) && manualSlots[slotKey] !== p.id;
+                                    return <option key={p.id} value={p.id} disabled={isTaken}>{p.name} {isTaken ? '(Já escalada)' : ''}</option>
+                                  })}
+                                </select>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      );
+                    })}
+                  </div>
+
                 <button 
                   className="btn-primary" 
-                  style={{ width: '100%', height: 65, marginBottom: 100, fontSize: '1.1rem', background: '#2ecc71', borderColor: '#2ecc71' }} 
+                  style={{ width: '100%', height: 65, marginBottom: 50, fontSize: '1rem', background: '#27ae60', borderColor: '#27ae60', color: '#fff' }} 
                   onClick={saveGroups}
                   disabled={isGenerating}
                 >
-                  {isGenerating ? 'GERANDO PARTIDAS...' : 'CONFIRMAR E GERAR TODOS OS JOGOS'}
+                  {isGenerating ? 'CRIANDO JOGOS...' : 'SALVAR GRUPOS E GERAR CONFRONTOS'}
                 </button>
-              </div>
+
+                <div style={{ padding: 25, borderRadius: 20, border: '1px dashed #D4AF37', background: 'rgba(212,175,55,0.05)', marginBottom: 50 }}>
+                  <label className="input-label" style={{ color: '#D4AF37' }}>2. Fase Eliminatória (Mata-Mata)</label>
+                  <p style={{ fontSize: '0.7rem', opacity: 0.7, marginBottom: 20 }}>Após a fase de grupos, use este campo para gerar a chave final (Ex: use 8 para Quartas de Final).</p>
+                  <div style={{ display: 'flex', gap: 15, alignItems: 'center' }}>
+                    <input type="number" value={bracketSize} onChange={e => setBracketSize(e.target.value)} placeholder="Ex: 8" style={{ width: 100, marginBottom: 0 }} />
+                    <button className="btn-primary" style={{ flex: 1, height: 60, background: '#D4AF37', color: '#000', marginBottom: 0 }} onClick={generateManualBracket}>GERAR CHAVE MATA-MATA</button>
+                  </div>
+                </div>
+              </>
             )}
           </div>
         )}
