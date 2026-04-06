@@ -42,6 +42,11 @@ export default function Admin() {
   const [editCourt, setEditCourt] = useState('');
   const [editTime, setEditTime] = useState('');
 
+  // Bracket/Groups States
+  const [previewGroups, setPreviewGroups] = useState([]);
+  const [groupSize, setGroupSize] = useState(3);
+  const [isGenerating, setIsGenerating] = useState(false);
+
   // Persistent TV Channel para Broadcasts instantâneos
   const [tvChannel, setTvChannel] = useState(null);
   useEffect(() => {
@@ -261,6 +266,62 @@ export default function Admin() {
     }
   };
 
+  const generateGroups = () => {
+    if (!selectedC) return alert('Selecione uma categoria!');
+    const categoryPairs = pairs.filter(p => p.category_id === selectedC);
+    if (categoryPairs.length < 2) return alert('Necessário ao menos 2 duplas nesta categoria!');
+
+    // Shuffle
+    const shuffled = [...categoryPairs].sort(() => Math.random() - 0.5);
+    
+    const groups = [];
+    let groupIdx = 0;
+    for (let i = 0; i < shuffled.length; i += Number(groupSize)) {
+      const groupPairs = shuffled.slice(i, i + Number(groupSize));
+      const letter = String.fromCharCode(65 + groupIdx); // A, B, C...
+      groups.push({ name: `Grupo ${letter}`, pairs: groupPairs });
+      groupIdx++;
+    }
+    setPreviewGroups(groups);
+  };
+
+  const saveGroups = async () => {
+    if (previewGroups.length === 0) return;
+    if (!window.confirm('Isso criará todos os jogos da fase de grupos no banco. Confirmar?')) return;
+    
+    setIsGenerating(true);
+    const matchesToCreate = [];
+
+    previewGroups.forEach(group => {
+      // Round robin matches for the group
+      for (let i = 0; i < group.pairs.length; i++) {
+        for (let j = i + 1; j < group.pairs.length; j++) {
+          matchesToCreate.push({
+            tournament_id: selectedT,
+            category_id: selectedC,
+            pair1_id: group.pairs[i].id,
+            pair2_id: group.pairs[j].id,
+            status: 'pending',
+            stage: group.name // "Grupo A", "Grupo B", etc
+          });
+        }
+      }
+    });
+
+    const { error } = await supabase.from('matches').insert(matchesToCreate);
+    setIsGenerating(false);
+
+    if (error) {
+      alert('Erro ao salvar chaves: ' + error.message);
+    } else {
+      alert('✅ Fase de Grupos gerada com sucesso!');
+      setPreviewGroups([]);
+      loadData();
+      setActiveTab('scoreboard');
+      if (tvChannel) tvChannel.send({ type: 'broadcast', event: 'sync_data' });
+    }
+  };
+
   if (!session) return (
     <div style={{ height: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center', background: '#000', padding: 20 }}>
       {/* Remover borda do card de login para integrar a logo perfeitamente */}
@@ -283,6 +344,7 @@ export default function Admin() {
           <div className={`nav-item ${activeTab === 'scoreboard' ? 'active' : ''}`} onClick={() => setActiveTab('scoreboard')}><Swords size={20} /> Score (Ativos)</div>
           <div className={`nav-item ${activeTab === 'history' ? 'active' : ''}`} onClick={() => setActiveTab('history')}><LayoutList size={20} /> Partidas (Encerradas)</div>
           <div className={`nav-item ${activeTab === 'matches' ? 'active' : ''}`} onClick={() => setActiveTab('matches')}><Gamepad2 size={20} /> Agendar Jogo</div>
+          <div className={`nav-item ${activeTab === 'brackets' ? 'active' : ''}`} onClick={() => setActiveTab('brackets')}><Network size={20} /> Chaveamento</div>
           <div className={`nav-item ${activeTab === 'pairs' ? 'active' : ''}`} onClick={() => setActiveTab('pairs')}><UserPlus size={20} /> Duplas</div>
           <div className={`nav-item ${activeTab === 'setup' ? 'active' : ''}`} onClick={() => setActiveTab('setup')}><Settings size={20} />Configurar</div>
           <div style={{ marginTop: 'auto' }}><a href="/tv" target="_blank" className="nav-item" style={{ textDecoration: 'none' }}><Monitor size={20} /> Ver TV</a><div className="nav-item" onClick={handleLogout} style={{ color: 'var(--accent-secondary)' }}><LogOut size={20} /> Sair</div></div>
@@ -294,6 +356,7 @@ export default function Admin() {
         <div className={`m-nav-item ${activeTab === 'scoreboard' ? 'active' : ''}`} onClick={() => setActiveTab('scoreboard')}><Swords size={20} /><small>Score</small></div>
         <div className={`m-nav-item ${activeTab === 'history' ? 'active' : ''}`} onClick={() => setActiveTab('history')}><LayoutList size={20} /><small>Partidas</small></div>
         <div className={`m-nav-item ${activeTab === 'matches' ? 'active' : ''}`} onClick={() => setActiveTab('matches')}><Gamepad2 size={20} /><small>Agendar</small></div>
+        <div className={`m-nav-item ${activeTab === 'brackets' ? 'active' : ''}`} onClick={() => setActiveTab('brackets')}><Network size={20} /><small>Chaves</small></div>
         <div className={`m-nav-item ${activeTab === 'pairs' ? 'active' : ''}`} onClick={() => setActiveTab('pairs')}><UserPlus size={20} /><small>Duplas</small></div>
         <div className={`m-nav-item ${activeTab === 'setup' ? 'active' : ''}`} onClick={() => setActiveTab('setup')}><Settings size={20} /><small>Setup</small></div>
       </nav>
@@ -473,6 +536,68 @@ export default function Admin() {
               <div style={{ display: 'grid', gap: 10, marginBottom: 20 }}><select value={selectedT} onChange={e => setSelectedT(e.target.value)} style={{ marginBottom: 0 }}><option value="">Torneio...</option>{tournaments.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}</select><select value={selectedC} onChange={e => setSelectedC(e.target.value)} style={{ marginBottom: 0 }}><option value="">Categoria...</option>{categories.filter(c => c.tournament_id === selectedT).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></div>
               {selectedC && <><label className="input-label">Nomes dos Atletas</label><input placeholder="Atleta 1" value={atleta1} onChange={e => setAtleta1(e.target.value)} /><input placeholder="Atleta 2" value={atleta2} onChange={e => setAtleta2(e.target.value)} /><button onClick={createPair} className="btn-primary" style={{ width: '100%', height: 55 }}>REGISTRAR DUPLA</button></>}
             </div>
+          </div>
+        )}
+
+        {activeTab === 'brackets' && (
+          <div style={{ maxWidth: 800, margin: '0 auto' }}>
+            <h1 className="section-title">Chaveamento (Fase de Grupos)</h1>
+            <div className="app-card" style={{ marginBottom: 30 }}>
+              <label className="input-label">1. Selecione o Evento</label>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 15, marginBottom: 20 }}>
+                <select value={selectedT} onChange={e => setSelectedT(e.target.value)}>
+                  <option value="">Torneio...</option>
+                  {tournaments.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                </select>
+                <select value={selectedC} onChange={e => setSelectedC(e.target.value)}>
+                  <option value="">Categoria...</option>
+                  {categories.filter(c => c.tournament_id === selectedT).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+              </div>
+
+              {selectedC && (
+                <>
+                  <label className="input-label">2. Configuração dos Grupos</label>
+                  <div style={{ display: 'flex', gap: 15, alignItems: 'center', marginBottom: 20 }}>
+                    <span style={{ fontSize: '0.8rem', opacity: 0.7 }}>Duplas por Grupo:</span>
+                    <select value={groupSize} onChange={e => setGroupSize(e.target.value)} style={{ width: 100, marginBottom: 0 }}>
+                      <option value="3">3 duplas</option>
+                      <option value="4">4 duplas</option>
+                      <option value="5">5 duplas</option>
+                    </select>
+                    <button className="btn-primary" style={{ flex: 1, height: 45, marginBottom: 0 }} onClick={generateGroups}>SORTEAR GRUPOS</button>
+                  </div>
+                </>
+              )}
+            </div>
+
+            {previewGroups.length > 0 && (
+              <div className="fade-in">
+                <h2 style={{ fontSize: '1rem', color: 'var(--accent-primary)', marginBottom: 20, textAlign: 'center', letterSpacing: 2 }}>PRÉVIA DOS GRUPOS</h2>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: 20, marginBottom: 40 }}>
+                  {previewGroups.map((group, gIdx) => (
+                    <div key={gIdx} className="app-card" style={{ borderTop: '4px solid var(--accent-primary)', background: 'rgba(255,255,255,0.02)' }}>
+                      <h3 style={{ fontSize: '0.9rem', marginBottom: 15, textAlign: 'center', fontWeight: 900 }}>{group.name}</h3>
+                      <div style={{ display: 'grid', gap: 8 }}>
+                        {group.pairs.map((p, pIdx) => (
+                          <div key={pIdx} style={{ fontSize: '0.8rem', padding: '8px 12px', background: 'rgba(255,255,255,0.05)', borderRadius: 8 }}>
+                            {p.name}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <button 
+                  className="btn-primary" 
+                  style={{ width: '100%', height: 65, marginBottom: 100, fontSize: '1.1rem', background: '#2ecc71', borderColor: '#2ecc71' }} 
+                  onClick={saveGroups}
+                  disabled={isGenerating}
+                >
+                  {isGenerating ? 'GERANDO PARTIDAS...' : 'CONFIRMAR E GERAR TODOS OS JOGOS'}
+                </button>
+              </div>
+            )}
           </div>
         )}
 

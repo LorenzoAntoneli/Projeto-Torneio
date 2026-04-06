@@ -250,11 +250,16 @@ export default function TVDisplay() {
             <section>
               {categoriesPresent.map(cat => (
                 <div key={cat} style={{ marginBottom: 40 }}>
-                  <h2 style={{ color: 'var(--accent-primary)', fontSize: '1.2rem', textTransform: 'uppercase', letterSpacing: 4, marginBottom: 20, display: 'flex', alignItems: 'center', gap: 15 }}><Star size={18} /> {cat}</h2>
+                  <h2 style={{ color: 'var(--accent-primary)', fontSize: '1.2rem', textTransform: 'uppercase', letterSpacing: 4, marginBottom: 20, display: 'flex', alignItems: 'center', gap: 15 }}>
+                    <Star size={18} /> {cat}
+                  </h2>
                   <div style={{ display: 'grid', gap: 15 }}>
                     {activeMatches.filter(m => m.category_name === cat).map(m => (
                       <div key={m.id} className="glass-panel" style={{ padding: '25px 35px', borderRadius: 25, borderLeft: '10px solid var(--accent-primary)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <div style={{ flex: 1 }}><div style={{ fontSize: '2rem', fontWeight: 900 }}>{m.pair1_name} <span style={{ opacity: 0.2, fontSize: '1rem', margin: '0 10px' }}>VS</span> {m.pair2_name}</div></div>
+                        <div style={{ flex: 1 }}>
+                          {m.stage && <div style={{ fontSize: '0.7rem', color: 'var(--accent-primary)', fontWeight: 800, marginBottom: 5, letterSpacing: 2 }}>{m.stage.toUpperCase()}</div>}
+                          <div style={{ fontSize: '2rem', fontWeight: 900 }}>{m.pair1_name} <span style={{ opacity: 0.2, fontSize: '1rem', margin: '0 10px' }}>VS</span> {m.pair2_name}</div>
+                        </div>
                         <div style={{ display: 'flex', gap: 30, alignItems: 'center' }}>
                           <div style={{ textAlign: 'center' }}><div style={{ fontSize: '0.7rem', opacity: 0.5, fontWeight: 900 }}>QUADRA</div><div style={{ fontSize: '1.4rem', fontWeight: 900, color: 'var(--accent-primary)' }}>{m.court_name}</div></div>
                           <div style={{ textAlign: 'center', background: 'rgba(255,255,255,0.05)', padding: '10px 15px', borderRadius: 12 }}><div style={{ fontSize: '0.7rem', opacity: 0.5, fontWeight: 900 }}>INÍCIO</div><div style={{ fontSize: '1.4rem', fontWeight: 900 }}>{m.scheduled_time ? m.scheduled_time.substring(0, 5) : '--:--'}</div></div>
@@ -271,7 +276,10 @@ export default function TVDisplay() {
               <div style={{ display: 'grid', gap: 15 }}>
                 {lastResults.slice(0, 8).map(m => (
                   <div key={m.id} className="glass-panel" style={{ padding: 20, borderRadius: 20, opacity: 0.7 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.6rem', color: 'var(--accent-primary)', fontWeight: 900, marginBottom: 12, textTransform: 'uppercase', letterSpacing: 2 }}><span>{m.category_name}</span><span style={{ opacity: 0.5 }}>{new Date(m.updated_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span></div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.6rem', color: 'var(--accent-primary)', fontWeight: 900, marginBottom: 12, textTransform: 'uppercase', letterSpacing: 2 }}>
+                      <span>{m.category_name} {m.stage ? `• ${m.stage}` : ''}</span>
+                      <span style={{ opacity: 0.5 }}>{new Date(m.updated_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
+                    </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}><span style={{ fontSize: '1rem', fontWeight: m.winner_id === m.pair1_id ? 900 : 400, color: m.winner_id === m.pair1_id ? '#fff' : '#888' }}>{m.pair1_name}</span><span style={{ fontSize: '1.2rem', fontWeight: 900, color: 'var(--accent-primary)' }}>{m.pair1_games}</span></div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}><span style={{ fontSize: '1rem', fontWeight: m.winner_id === m.pair2_id ? 900 : 400, color: m.winner_id === m.pair2_id ? '#fff' : '#888' }}>{m.pair2_name}</span><span style={{ fontSize: '1.2rem', fontWeight: 900, color: 'var(--accent-primary)' }}>{m.pair2_games}</span></div>
@@ -290,7 +298,9 @@ export default function TVDisplay() {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 25 }}>
               {activeMatches.length > 0 ? activeMatches.map(m => (
                 <div key={m.id} className="glass-panel" style={{ padding: '40px', borderRadius: 30, textAlign: 'center', border: '1px solid rgba(212,175,55,0.1)' }}>
-                  <div style={{ fontSize: '0.8rem', color: 'var(--accent-primary)', fontWeight: 800, marginBottom: 15, textTransform: 'uppercase' }}>{m.category_name}</div>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--accent-primary)', fontWeight: 800, marginBottom: 15, textTransform: 'uppercase' }}>
+                    {m.category_name} {m.stage ? `• ${m.stage}` : ''}
+                  </div>
                   <div style={{ fontSize: '1.8rem', fontWeight: 900, marginBottom: 20 }}>{m.pair1_name} <br /><span style={{ opacity: 0.2, fontSize: '1rem' }}>VS</span><br /> {m.pair2_name}</div>
                   <div style={{ display: 'flex', justifyContent: 'center', gap: 40, borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: 20 }}>
                     <div><div style={{ fontSize: '0.6rem', opacity: 0.5 }}>QUADRA</div><div style={{ fontSize: '1.8rem', fontWeight: 950, color: 'var(--accent-primary)' }}>{m.court_name}</div></div>
@@ -309,7 +319,9 @@ export default function TVDisplay() {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 20 }}>
               {lastResults.length > 0 ? lastResults.slice(0, 16).map(m => (
                 <div key={m.id} className="glass-panel" style={{ padding: '25px', borderRadius: 20, opacity: 0.8 }}>
-                  <div style={{ fontSize: '0.6rem', color: 'var(--accent-primary)', fontWeight: 800, marginBottom: 15 }}>{m.category_name}</div>
+                  <div style={{ fontSize: '0.6rem', color: 'var(--accent-primary)', fontWeight: 800, marginBottom: 15 }}>
+                    {m.category_name} {m.stage ? `• ${m.stage}` : ''}
+                  </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
                     <span style={{ fontSize: '1.1rem', fontWeight: m.winner_id === m.pair1_id ? 900 : 400, color: m.winner_id === m.pair1_id ? '#fff' : '#666' }}>{m.pair1_name}</span>
                     <span style={{ fontSize: '1.5rem', fontWeight: 950, color: 'var(--accent-primary)' }}>{m.pair1_games}</span>
@@ -348,7 +360,9 @@ export default function TVDisplay() {
         <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: '#000', zIndex: 20000, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
           <div style={{ textAlign: 'center', animation: 'pulse 1.5s infinite' }}>
             <Clock size={120} color="var(--accent-primary)" style={{ marginBottom: 30 }} />
-            <h2 style={{ fontSize: '2rem', letterSpacing: 10, opacity: 0.6 }}>CHAMADA DE JOGO</h2>
+            <h2 style={{ fontSize: '2rem', letterSpacing: 10, opacity: 0.6 }}>
+              {callingMatch.stage ? callingMatch.stage.toUpperCase() : 'CHAMADA DE JOGO'}
+            </h2>
             <h1 style={{ fontSize: '5rem', fontWeight: 950, margin: '20px 0', lineHeight: 1.1 }}>{callingMatch.pair1_name} <br /> <small style={{ fontSize: '2rem', opacity: 0.2 }}>X</small> <br /> {callingMatch.pair2_name}</h1>
             <div style={{ background: 'var(--accent-primary)', color: '#000', padding: '30px 60px', borderRadius: 30, fontSize: '3rem', fontWeight: 950, marginTop: 40 }}>
               DIRIJAM-SE À {callingMatch.court_name.toUpperCase()}
