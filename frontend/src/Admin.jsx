@@ -123,8 +123,6 @@ export default function Admin() {
       return alert(error.message);
     }
     
-    // Auto Avanço Removido
-
     
     alert('✅ Placar Oficializado!'); loadData();
   };

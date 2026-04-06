@@ -86,15 +86,15 @@ export default function TVDisplay() {
     let matchTimeout;
     let pendingFinishId = null;
     const ch = supabase.channel('tv_rt').on('postgres_changes', { event: '*', schema: 'public', table: 'matches' }, (p) => {
-      // Detector de Vitoria Nativo Suave
-      if (p.eventType === 'UPDATE' && p.new.status === 'finished') {
+      if (p.eventType === 'UPDATE' && p.new.status === 'finished' && p.old?.status !== 'finished') {
         pendingFinishId = p.new.id;
       }
+      
       clearTimeout(matchTimeout);
       matchTimeout = setTimeout(() => {
         loadMatches(pendingFinishId);
         pendingFinishId = null;
-      }, 700);
+      }, 500);
     }).on('postgres_changes', { event: '*', schema: 'public', table: 'sponsors' }, () => {
       loadSponsors();
     }).on('postgres_changes', { event: '*', schema: 'public', table: 'settings' }, (p) => {
@@ -186,12 +186,7 @@ export default function TVDisplay() {
 
   // 1. COLETOR: Monitora partidas para o horário atual e adiciona na fila
   useEffect(() => {
-    const toQueue = matches.filter(m => {
-      if (m.status !== 'pending' || !m.scheduled_time || calledIds.has(m.id)) return false;
-      // Garante que "14:30:00" do banco seja lido como "14:30" pelo relogio!
-      return m.scheduled_time.substring(0, 5) === currentTime;
-    });
-    
+    const toQueue = matches.filter(m => m.status === 'pending' && m.scheduled_time && m.scheduled_time.startsWith(currentTime) && !calledIds.has(m.id));
     if (toQueue.length > 0) {
       setCallQueue(prev => [...prev, ...toQueue]);
       setCalledIds(prev => {
