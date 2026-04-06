@@ -653,6 +653,12 @@ export default function Admin() {
                             <option value="4">4 duplas</option>
                             <option value="5">5 duplas</option>
                             <option value="6">6 duplas</option>
+                            <option value="7">7 duplas</option>
+                            <option value="8">8 duplas</option>
+                            <option value="9">9 duplas</option>
+                            <option value="10">10 duplas</option>
+                            <option value="11">11 duplas</option>
+                            <option value="12">12 duplas</option>
                           </select>
                        </div>
                        <div>
@@ -675,33 +681,35 @@ export default function Admin() {
                        </div>
 
                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 20, marginBottom: 40 }}>
-                          {['A', 'B', 'C', 'D'].map(letter => {
-                             const categoryPairs = pairs.filter(p => p.category_id === selectedC);
-                             return (
-                               <div key={letter} className="app-card" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid #333' }}>
-                                  <h3 style={{ fontSize: '0.9rem', color: 'var(--accent-primary)', marginBottom: 15, textAlign: 'center' }}>GRUPO {letter}</h3>
-                                  {[1, 2, 3, 4, 5, 6].slice(0, groupSize).map(slotNum => {
-                                     const slotKey = `${letter}${slotNum}`;
-                                     return (
-                                       <div key={slotKey} style={{ marginBottom: 10 }}>
-                                          <select 
-                                            value={manualSlots[slotKey] || ''} 
-                                            onChange={e => setManualSlots({...manualSlots, [slotKey]: e.target.value})}
-                                            style={{ fontSize: '0.8rem', padding: '10px' }}
-                                          >
-                                             <option value="">-- Selecionar Dupla --</option>
-                                             {categoryPairs.map(p => {
-                                                const isTaken = Object.values(manualSlots).includes(p.id) && manualSlots[slotKey] !== p.id;
-                                                return <option key={p.id} value={p.id} disabled={isTaken}>{p.name} {isTaken ? '(Já escalada)' : ''}</option>
-                                             })}
-                                          </select>
-                                       </div>
-                                     );
-                                  })}
-                               </div>
-                             )
-                          })}
-                       </div>
+                    {Array.from({ length: Math.ceil(pairs.filter(p => p.category_id === selectedC).length / Number(groupSize)) }).map((_, gIdx) => {
+                       const letter = String.fromCharCode(65 + gIdx);
+                       const categoryPairs = pairs.filter(p => p.category_id === selectedC);
+                       return (
+                         <div key={letter} className="app-card" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid #333' }}>
+                            <h3 style={{ fontSize: '0.9rem', color: 'var(--accent-primary)', marginBottom: 15, textAlign: 'center' }}>GRUPO {letter}</h3>
+                            {Array.from({ length: Number(groupSize) }).map((_, sIdx) => {
+                               const slotNum = sIdx + 1;
+                               const slotKey = `${letter}${slotNum}`;
+                               return (
+                                 <div key={slotKey} style={{ marginBottom: 10 }}>
+                                    <select 
+                                      value={manualSlots[slotKey] || ''} 
+                                      onChange={e => setManualSlots({...manualSlots, [slotKey]: e.target.value})}
+                                      style={{ fontSize: '0.8rem', padding: '10px' }}
+                                    >
+                                       <option value="">-- Selecionar Dupla --</option>
+                                       {categoryPairs.map(p => {
+                                          const isTaken = Object.values(manualSlots).includes(p.id) && manualSlots[slotKey] !== p.id;
+                                          return <option key={p.id} value={p.id} disabled={isTaken}>{p.name} {isTaken ? '(Já escalada)' : ''}</option>
+                                       })}
+                                    </select>
+                                 </div>
+                               );
+                            })}
+                         </div>
+                       )
+                    })}
+                 </div>
 
                        <button 
                          className="btn-primary" 
