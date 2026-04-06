@@ -108,7 +108,7 @@ export default function TVDisplay() {
     let slideTimer;
     if (tvSettings.mode === 'auto') {
       slideTimer = setInterval(() => {
-        setCurrentSlide(prev => (prev + 1) % 4);
+        setCurrentSlide(prev => (prev + 1) % 5);
       }, (tvSettings.time || 30) * 1000);
     } else {
       setCurrentSlide(Number(tvSettings.mode));
@@ -203,6 +203,10 @@ export default function TVDisplay() {
     .filter(m => m.status === 'finished')
     .sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
 
+  const bracketMatches = matches.filter(m => m.stage);
+  const stagesOrdered = ['Oitavas de Final', 'Quartas de Final', 'Semifinal', 'Final'];
+  const activeBracketStages = stagesOrdered.filter(s => bracketMatches.some(m => m.stage === s));
+
   return (
     <div className="tv-container" style={{ background: '#000', height: '100vh', color: '#fff', padding: '40px 60px', display: 'flex', flexDirection: 'column', overflow: 'hidden', position: 'relative', fontFamily: 'system-ui, sans-serif' }}>
 
@@ -216,7 +220,7 @@ export default function TVDisplay() {
               <span style={{ letterSpacing: 5, opacity: 0.5, fontSize: '0.8rem' }}>Torneio em Tempo Real</span>
               <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#2ecc71', boxShadow: '0 0 10px #2ecc71' }}></div>
               <span style={{ fontSize: '0.6rem', opacity: 0.3, textTransform: 'uppercase' }}>
-                {currentSlide === 0 ? "Geral" : currentSlide === 1 ? "Próximas" : currentSlide === 2 ? "Resultados" : "Patrocinadores"}
+                {currentSlide === 0 ? "Geral" : currentSlide === 1 ? "Próximas" : currentSlide === 2 ? "Resultados" : currentSlide === 3 ? "Patrocinadores" : "Chaveamento"}
               </span>
             </div>
           </div>
@@ -321,6 +325,37 @@ export default function TVDisplay() {
                   <p style={{ marginTop: 25, fontSize: '1.2rem', fontWeight: 900, letterSpacing: 4, opacity: 0.6 }}>{s.name.toUpperCase()}</p>
                 </div>
               )) : <p style={{ opacity: 0.2, fontSize: '2rem' }}>Agradecemos aos nossos apoiadores!</p>}
+            </div>
+          </div>
+        )}
+
+        {/* SLIDE 4: CHAVEAMENTO MATA-MATA (BRACKET) */}
+        {currentSlide === 4 && (
+          <div className="fade-in" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+            <h2 style={{ color: 'var(--accent-primary)', fontSize: '2rem', textTransform: 'uppercase', letterSpacing: 6, marginBottom: 40, textAlign: 'center' }}>• Chaveamento •</h2>
+            
+            <div style={{ flex: 1, overflowX: 'auto', display: 'flex', gap: 60, padding: '20px 60px', justifyContent: 'center' }}>
+              {activeBracketStages.length > 0 ? activeBracketStages.map(stage => {
+                const stageMatches = bracketMatches.filter(m => m.stage === stage).sort((a, b) => a.created_at?.localeCompare(b.created_at));
+                return (
+                  <div key={stage} style={{ display: 'flex', flexDirection: 'column', gap: 20, justifyContent: 'space-around', minWidth: 280 }}>
+                    <h3 style={{ textAlign: 'center', fontSize: '1rem', opacity: 0.5, letterSpacing: 2, textTransform: 'uppercase', marginBottom: 10 }}>{stage}</h3>
+                    {stageMatches.map(m => (
+                      <div key={m.id} className="glass-panel" style={{ padding: 15, borderRadius: 15, border: '1px solid rgba(212,175,55,0.2)', position: 'relative', boxShadow: '0 10px 20px rgba(0,0,0,0.5)' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10, borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: 5 }}>
+                          <span style={{ fontSize: '1.1rem', fontWeight: m.winner_id === m.pair1_id ? 900 : 600, color: m.winner_id === m.pair1_id ? 'var(--accent-primary)' : '#fff', opacity: m.pair1_name === '?' ? 0.3 : 1 }}>{m.pair1_name !== '?' ? m.pair1_name : 'A Definir'}</span>
+                          <span style={{ fontWeight: 900, color: 'var(--accent-primary)' }}>{m.pair1_games > 0 || m.status === 'finished' ? m.pair1_games : ''}</span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                          <span style={{ fontSize: '1.1rem', fontWeight: m.winner_id === m.pair2_id ? 900 : 600, color: m.winner_id === m.pair2_id ? 'var(--accent-primary)' : '#fff', opacity: m.pair2_name === '?' ? 0.3 : 1 }}>{m.pair2_name !== '?' ? m.pair2_name : 'A Definir'}</span>
+                          <span style={{ fontWeight: 900, color: 'var(--accent-primary)' }}>{m.pair2_games > 0 || m.status === 'finished' ? m.pair2_games : ''}</span>
+                        </div>
+                        <div style={{ position: 'absolute', top: -10, left: 10, background: '#000', padding: '0 8px', fontSize: '0.7rem', color: 'var(--accent-primary)', fontWeight: 900, letterSpacing: 1, borderRadius: 5 }}>{m.category_name}</div>
+                      </div>
+                    ))}
+                  </div>
+                );
+              }) : <p style={{ textAlign: 'center', opacity: 0.2, fontSize: '2rem', marginTop: 100, width: '100%' }}>Nenhum chaveamento ativo.</p>}
             </div>
           </div>
         )}
