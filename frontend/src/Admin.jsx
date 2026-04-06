@@ -377,16 +377,17 @@ export default function Admin() {
     setGroupType('manual');
   };
 
-  const saveGroups = async () => {
+   const saveGroups = async () => {
     const categoryPairs = pairs.filter(p => p.category_id === selectedC);
-    // Agrupa os slots por letra de grupo
     const finalGroups = {};
+    
     Object.keys(manualSlots).forEach(key => {
       const letter = key[0];
       const pairId = manualSlots[key];
       if (pairId) {
         if (!finalGroups[letter]) finalGroups[letter] = [];
-        finalGroups[letter].push(categoryPairs.find(p => p.id === pairId));
+        const pair = categoryPairs.find(p => p.id === pairId);
+        if (pair) finalGroups[letter].push(pair);
       }
     });
 
@@ -395,20 +396,22 @@ export default function Admin() {
       pairs: finalGroups[letter]
     }));
 
-    if (groupsArray.length === 0) return alert('Preencha ao menos um grupo!');
-    if (!window.confirm('Confirmar a criação destes grupos no banco?')) return;
+    if (groupsArray.length === 0) return alert('⚠️ Preencha ao menos um grupo com duplas!');
+    if (!window.confirm('Confirmar a criação das partidas para estes grupos?')) return;
     
     setIsGenerating(true);
     const matchesToCreate = [];
 
     groupsArray.forEach(group => {
-      for (let i = 0; i < group.pairs.length; i++) {
-        for (let j = i + 1; j < group.pairs.length; j++) {
+      // Filtrar apenas duplas válidas para evitar erros
+      const validPairs = group.pairs.filter(p => p && p.id);
+      for (let i = 0; i < validPairs.length; i++) {
+        for (let j = i + 1; j < validPairs.length; j++) {
           matchesToCreate.push({
             tournament_id: selectedT,
             category_id: selectedC,
-            pair1_id: group.pairs[i].id,
-            pair2_id: group.pairs[j].id,
+            pair1_id: validPairs[i].id,
+            pair2_id: validPairs[j].id,
             status: 'pending',
             stage: group.name
           });
@@ -416,14 +419,21 @@ export default function Admin() {
       }
     });
 
+    if (matchesToCreate.length === 0) {
+      setIsGenerating(false);
+      return alert('⚠️ Nenhum confronto gerado. Verifique se os grupos têm ao menos 2 duplas.');
+    }
+
     const { error } = await supabase.from('matches').insert(matchesToCreate);
     setIsGenerating(false);
 
     if (error) {
-      alert('Erro ao salvar chaves: ' + error.message);
+      console.error("Erro Supabase:", error);
+      alert('❌ Erro ao salvar partidas: ' + error.message);
     } else {
-      alert('✅ Fase de Grupos gerada com sucesso!');
-      setPreviewGroups([]);
+      alert('✅ Grupos e Partidas gerados com sucesso!');
+      setManualSlots({}); // Limpa os slots após salvar
+      setGroupType('auto');
       loadData();
       setActiveTab('scoreboard');
       if (tvChannel) tvChannel.send({ type: 'broadcast', event: 'sync_data' });
