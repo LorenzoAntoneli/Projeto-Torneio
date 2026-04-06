@@ -16,7 +16,7 @@ export default function Admin() {
   const [courts, setCourts] = useState([]);
   const [sponsors, setSponsors] = useState([]);
 
-  // Status do Formulário
+  // Form States
   const [selectedT, setSelectedT] = useState('');
   const [selectedC, setSelectedC] = useState('');
   const [newTName, setNewTName] = useState('');
@@ -229,7 +229,10 @@ export default function Admin() {
   const deleteMatch = async (id) => {
     if (!window.confirm('⚠️ Tem certeza que deseja APAGAR esta partida?')) return;
     const { error } = await supabase.from('matches').delete().eq('id', id);
-    if (error) alert(error.message); else loadData();
+    if (error) alert(error.message); else {
+      loadData();
+      if (tvChannel) tvChannel.send({ type: 'broadcast', event: 'sync_data' });
+    }
   };
 
   const startEdit = (m) => {
