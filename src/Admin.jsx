@@ -46,6 +46,8 @@ export default function Admin() {
   const [previewGroups, setPreviewGroups] = useState([]);
   const [groupSize, setGroupSize] = useState(3);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [groupType, setGroupType] = useState('auto'); // 'auto' ou 'manual'
+  const [manualSlots, setManualSlots] = useState({}); // { 'A1': pairId, 'A2': pairId... }
 
   // Persistent TV Channel para Broadcasts instantâneos
   const [tvChannel, setTvChannel] = useState(null);
@@ -331,29 +333,52 @@ export default function Admin() {
     const categoryPairs = pairs.filter(p => p.category_id === selectedC);
     if (categoryPairs.length < 2) return alert('Necessário ao menos 2 duplas nesta categoria!');
 
-    // Shuffle
-    const shuffled = [...categoryPairs].sort(() => Math.random() - 0.5);
+    const size = Math.min(categoryPairs.length, 12);
+    const shuffled = [...categoryPairs.slice(0, size)].sort(() => Math.random() - 0.5);
     
-    const groups = [];
-    let groupIdx = 0;
-    for (let i = 0; i < shuffled.length; i += Number(groupSize)) {
-      const groupPairs = shuffled.slice(i, i + Number(groupSize));
-      const letter = String.fromCharCode(65 + groupIdx); // A, B, C...
-      groups.push({ name: `Grupo ${letter}`, pairs: groupPairs });
-      groupIdx++;
+    const countPerGroup = Number(groupSize);
+    const numGroups = Math.ceil(shuffled.length / countPerGroup);
+    const newSlots = {};
+    
+    let pairIdx = 0;
+    for (let g = 0; g < numGroups; g++) {
+      const letter = String.fromCharCode(65 + g);
+      for (let s = 1; s <= countPerGroup; s++) {
+        if (pairIdx < shuffled.length) {
+          newSlots[`${letter}${s}`] = shuffled[pairIdx].id;
+          pairIdx++;
+        }
+      }
     }
-    setPreviewGroups(groups);
+    setManualSlots(newSlots);
+    setGroupType('manual'); // Mostra a interface de slots preenchida
   };
 
   const saveGroups = async () => {
-    if (previewGroups.length === 0) return;
-    if (!window.confirm('Isso criará todos os jogos da fase de grupos no banco. Confirmar?')) return;
+    const categoryPairs = pairs.filter(p => p.category_id === selectedC);
+    // Agrupa os slots por letra de grupo
+    const finalGroups = {};
+    Object.keys(manualSlots).forEach(key => {
+      const letter = key[0];
+      const pairId = manualSlots[key];
+      if (pairId) {
+        if (!finalGroups[letter]) finalGroups[letter] = [];
+        finalGroups[letter].push(categoryPairs.find(p => p.id === pairId));
+      }
+    });
+
+    const groupsArray = Object.keys(finalGroups).sort().map(letter => ({
+      name: `Grupo ${letter}`,
+      pairs: finalGroups[letter]
+    }));
+
+    if (groupsArray.length === 0) return alert('Preencha ao menos um grupo!');
+    if (!window.confirm('Confirmar a criação destes grupos no banco?')) return;
     
     setIsGenerating(true);
     const matchesToCreate = [];
 
-    previewGroups.forEach(group => {
-      // Round robin matches for the group
+    groupsArray.forEach(group => {
       for (let i = 0; i < group.pairs.length; i++) {
         for (let j = i + 1; j < group.pairs.length; j++) {
           matchesToCreate.push({
@@ -362,7 +387,7 @@ export default function Admin() {
             pair1_id: group.pairs[i].id,
             pair2_id: group.pairs[j].id,
             status: 'pending',
-            stage: group.name // "Grupo A", "Grupo B", etc
+            stage: group.name
           });
         }
       }
@@ -641,6 +666,51 @@ export default function Admin() {
                 </div>
               )}
             </div>
+
+            {selectedC && (
+              <div style={{ marginTop: 20 }}>
+                 <div style={{ display: 'flex', gap: 10, marginBottom: 20 }}>
+                    <button className={`btn-primary ${groupType === 'manual' ? 'active' : ''}`} style={{ flex: 1, background: groupType === 'manual' ? 'var(--accent-primary)' : 'rgba(255,255,255,0.05)', color: groupType === 'manual' ? '#000' : '#fff' }} onClick={() => setGroupType('manual')}>MONTAR MANUAL</button>
+                    <button className="btn-primary" style={{ flex: 1, border: '1px solid var(--accent-primary)', background: 'transparent' }} onClick={generateGroups}>SORTEAR TUDO (RANDOM)</button>
+                 </div>
+
+                 {/* GRID DE SLOTS RESPONSIVO */}
+                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 20 }}>
+                    {['A', 'B', 'C', 'D'].map(letter => {
+                       const categoryPairs = pairs.filter(p => p.category_id === selectedC);
+                       return (
+                         <div key={letter} className="app-card" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid #333' }}>
+                            <h3 style={{ fontSize: '0.9rem', color: 'var(--accent-primary)', marginBottom: 15, textAlign: 'center' }}>GRUPO {letter}</h3>
+                            {[1, 2, 3, 4, 5].slice(0, groupSize).map(slotNum => {
+                               const slotKey = `${letter}${slotNum}`;
+                               return (
+                                 <div key={slotKey} style={{ marginBottom: 10 }}>
+                                    <select 
+                                      value={manualSlots[slotKey] || ''} 
+                                      onChange={e => setManualSlots({...manualSlots, [slotKey]: e.target.value})}
+                                      style={{ fontSize: '0.8rem', padding: '10px' }}
+                                    >
+                                       <option value="">-- Selecionar Dupla --</option>
+                                       {categoryPairs.map(p => {
+                                          // Desabilita se já estiver em outro slot
+                                          const isTaken = Object.values(manualSlots).includes(p.id) && manualSlots[slotKey] !== p.id;
+                                          return <option key={p.id} value={p.id} disabled={isTaken}>{p.name} {isTaken ? '(Já escalada)' : ''}</option>
+                                       })}
+                                    </select>
+                                 </div>
+                               );
+                            })}
+                         </div>
+                       )
+                    })}
+                 </div>
+
+                 <button className="btn-primary" style={{ width: '100%', height: 60, marginTop: 30, fontSize: '1rem', fontWeight: 900 }} onClick={saveGroups} disabled={isGenerating}>
+                    {isGenerating ? 'SALVANDO...' : 'OFICIALIZAR GRUPOS E CRIAR JOGOS'}
+                 </button>
+              </div>
+            )}
+
 
             <div style={{ marginTop: 40, background: 'rgba(0,0,0,0.3)', padding: 30, borderRadius: 20, border: '1px solid #222' }}>
                <h2 style={{ fontSize: '1rem', color: 'var(--accent-primary)', marginBottom: 30, textAlign: 'center', letterSpacing: 2 }}>VISUALIZAÇÃO DA CHAVE</h2>
