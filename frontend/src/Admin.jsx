@@ -349,8 +349,9 @@ export default function Admin() {
 
         {activeTab === 'scoreboard' && (
           <div>
-            <h1 className="section-title">Em Quadra</h1>
-            {matches.filter(m => m.status !== 'finished').map(m => (
+            <h1 className="section-title">Em Quadra / Próximos</h1>
+             <p style={{ opacity: 0.5, fontSize: '0.8rem', textAlign: 'center', marginBottom: 20 }}>Edite (no Lápis) para definir quadra/horário. Jogos sem dupla fechada não aparecem aqui.</p>
+            {matches.filter(m => m.status !== 'finished' && m.pair1_id && m.pair2_id).map(m => (
               <div key={m.id} className="app-card" style={{ borderLeftColor: 'var(--accent-primary)', paddingTop: 10 }}>
                 {/* Barra de Topo do Card (Ações) */}
                 <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '0 5px 10px 0', gap: 8 }}>
@@ -393,7 +394,7 @@ export default function Admin() {
                 }}>Lançar Placar</button>
               </div>
             ))}
-            {matches.filter(m => m.status !== 'finished').length === 0 && <p style={{ textAlign: 'center', opacity: 0.2, padding: 100, marginTop: 50 }}>Nenhum jogo em quadra no momento.</p>}
+            {matches.filter(m => m.status !== 'finished' && m.pair1_id && m.pair2_id).length === 0 && <p style={{ textAlign: 'center', opacity: 0.2, padding: 100, marginTop: 50 }}>Nenhum jogo aguardando placar no momento.</p>}
           </div>
         )}
 

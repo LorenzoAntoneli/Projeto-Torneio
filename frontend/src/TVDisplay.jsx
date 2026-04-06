@@ -3,6 +3,37 @@ import { supabase } from './supabase';
 import { Trophy, Clock, MapPin, Star } from 'lucide-react';
 import logo from './assets/logo.jpg';
 
+const BracketNode = ({ match, allMatches, isRoot }) => {
+  const children = allMatches
+    .filter(m => m.next_match_id === match.id)
+    .sort((a, b) => a.bracket_position - b.bracket_position);
+
+  return (
+    <div className={`bracket-node ${isRoot ? 'bracket-root' : ''}`}>
+      {children.length > 0 && (
+        <div className="bracket-children">
+          {children.map((c) => (
+            <div key={c.id} className="bracket-child-wrapper">
+              <BracketNode match={c} allMatches={allMatches} isRoot={false} />
+            </div>
+          ))}
+        </div>
+      )}
+      <div className="bracket-match">
+        <div style={{ fontSize: '0.6rem', color: 'var(--accent-primary)', textTransform: 'uppercase', marginBottom: 5, letterSpacing: 1, textAlign: 'center' }}>{match.stage}</div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: 5 }}>
+          <span style={{ fontSize: '0.9rem', fontWeight: match.winner_id === match.pair1_id ? 900 : 500, color: match.winner_id === match.pair1_id ? 'var(--accent-primary)' : '#fff', opacity: !match.pair1_id ? 0.3 : 1, width: '130px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{match.pair1_name !== '?' ? match.pair1_name : 'A Definir'}</span>
+          <span style={{ fontWeight: 900, color: 'var(--accent-primary)' }}>{match.pair1_games > 0 || match.status === 'finished' ? match.pair1_games : ''}</span>
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+          <span style={{ fontSize: '0.9rem', fontWeight: match.winner_id === match.pair2_id ? 900 : 500, color: match.winner_id === match.pair2_id ? 'var(--accent-primary)' : '#fff', opacity: !match.pair2_id ? 0.3 : 1, width: '130px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{match.pair2_name !== '?' ? match.pair2_name : 'A Definir'}</span>
+          <span style={{ fontWeight: 900, color: 'var(--accent-primary)' }}>{match.pair2_games > 0 || match.status === 'finished' ? match.pair2_games : ''}</span>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export default function TVDisplay() {
   const [matches, setMatches] = useState([]);
   const [victory, setVictory] = useState(null);
@@ -204,8 +235,7 @@ export default function TVDisplay() {
     .sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
 
   const bracketMatches = matches.filter(m => m.stage);
-  const stagesOrdered = ['Oitavas de Final', 'Quartas de Final', 'Semifinal', 'Final'];
-  const activeBracketStages = stagesOrdered.filter(s => bracketMatches.some(m => m.stage === s));
+  const categoriesWithBrackets = [...new Set(bracketMatches.map(m => m.category_name))];
 
   return (
     <div className="tv-container" style={{ background: '#000', height: '100vh', color: '#fff', padding: '40px 60px', display: 'flex', flexDirection: 'column', overflow: 'hidden', position: 'relative', fontFamily: 'system-ui, sans-serif' }}>
@@ -334,27 +364,15 @@ export default function TVDisplay() {
           <div className="fade-in" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
             <h2 style={{ color: 'var(--accent-primary)', fontSize: '2rem', textTransform: 'uppercase', letterSpacing: 6, marginBottom: 40, textAlign: 'center' }}>• Chaveamento •</h2>
             
-            <div style={{ flex: 1, overflowX: 'auto', display: 'flex', gap: 60, padding: '20px 60px', justifyContent: 'center' }}>
-              {activeBracketStages.length > 0 ? activeBracketStages.map(stage => {
-                const stageMatches = bracketMatches.filter(m => m.stage === stage).sort((a, b) => a.created_at?.localeCompare(b.created_at));
-                return (
-                  <div key={stage} style={{ display: 'flex', flexDirection: 'column', gap: 20, justifyContent: 'space-around', minWidth: 280 }}>
-                    <h3 style={{ textAlign: 'center', fontSize: '1rem', opacity: 0.5, letterSpacing: 2, textTransform: 'uppercase', marginBottom: 10 }}>{stage}</h3>
-                    {stageMatches.map(m => (
-                      <div key={m.id} className="glass-panel" style={{ padding: 15, borderRadius: 15, border: '1px solid rgba(212,175,55,0.2)', position: 'relative', boxShadow: '0 10px 20px rgba(0,0,0,0.5)' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10, borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: 5 }}>
-                          <span style={{ fontSize: '1.1rem', fontWeight: m.winner_id === m.pair1_id ? 900 : 600, color: m.winner_id === m.pair1_id ? 'var(--accent-primary)' : '#fff', opacity: m.pair1_name === '?' ? 0.3 : 1 }}>{m.pair1_name !== '?' ? m.pair1_name : 'A Definir'}</span>
-                          <span style={{ fontWeight: 900, color: 'var(--accent-primary)' }}>{m.pair1_games > 0 || m.status === 'finished' ? m.pair1_games : ''}</span>
-                        </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                          <span style={{ fontSize: '1.1rem', fontWeight: m.winner_id === m.pair2_id ? 900 : 600, color: m.winner_id === m.pair2_id ? 'var(--accent-primary)' : '#fff', opacity: m.pair2_name === '?' ? 0.3 : 1 }}>{m.pair2_name !== '?' ? m.pair2_name : 'A Definir'}</span>
-                          <span style={{ fontWeight: 900, color: 'var(--accent-primary)' }}>{m.pair2_games > 0 || m.status === 'finished' ? m.pair2_games : ''}</span>
-                        </div>
-                        <div style={{ position: 'absolute', top: -10, left: 10, background: '#000', padding: '0 8px', fontSize: '0.7rem', color: 'var(--accent-primary)', fontWeight: 900, letterSpacing: 1, borderRadius: 5 }}>{m.category_name}</div>
-                      </div>
-                    ))}
+            <div className="bracket-tree-wrapper">
+              {categoriesWithBrackets.length > 0 ? categoriesWithBrackets.map(cat => {
+                const finalsForCat = bracketMatches.filter(m => m.category_name === cat && !m.next_match_id);
+                return finalsForCat.map(finalMatch => (
+                  <div key={finalMatch.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 'min-content' }}>
+                    <h3 style={{ color: 'var(--accent-primary)', fontSize: '1.2rem', letterSpacing: 4, marginBottom: 20, textTransform: 'uppercase' }}>{cat}</h3>
+                    <BracketNode match={finalMatch} allMatches={bracketMatches} isRoot={true} />
                   </div>
-                );
+                ));
               }) : <p style={{ textAlign: 'center', opacity: 0.2, fontSize: '2rem', marginTop: 100, width: '100%' }}>Nenhum chaveamento ativo.</p>}
             </div>
           </div>
@@ -413,6 +431,36 @@ export default function TVDisplay() {
         @keyframes scroll-ticker {
           0% { transform: translateX(0); }
           100% { transform: translateX(-50%); }
+        }
+
+        /* BRACKET STYLES */
+        .bracket-tree-wrapper { flex: 1; overflow-x: auto; overflow-y: auto; display: flex; gap: 80px; padding: 20px 60px; align-items: center; justify-content: flex-start; }
+        .bracket-node { display: flex; align-items: center; position: relative; }
+        .bracket-children { display: flex; flex-direction: column; justify-content: center; position: relative; padding-right: 40px; gap: 10px; }
+        .bracket-child-wrapper { position: relative; display: flex; align-items: center; }
+        
+        .bracket-child-wrapper::after {
+            content: ''; position: absolute; right: -20px; top: 50%;
+            width: 20px; height: 2px; background: var(--accent-primary); opacity: 0.4;
+        }
+        .bracket-child-wrapper:first-child::before {
+            content: ''; position: absolute; right: -20px; top: 50%; bottom: -1px;
+            width: 2px; border-right: 2px solid var(--accent-primary); opacity: 0.4;
+        }
+        .bracket-child-wrapper:last-child::before {
+            content: ''; position: absolute; right: -20px; bottom: 50%; top: -1px;
+            width: 2px; border-right: 2px solid var(--accent-primary); opacity: 0.4;
+        }
+
+        .bracket-match {
+            width: 210px; background: rgba(10,10,10,0.9); backdrop-filter: blur(10px);
+            border: 1px solid rgba(212,175,55,0.4); border-radius: 12px; padding: 12px 15px;
+            margin: 8px 0; position: relative; z-index: 2; box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+        }
+
+        .bracket-children + .bracket-match::before {
+            content: ''; position: absolute; left: -20px; top: 50%;
+            width: 20px; height: 2px; background: var(--accent-primary); opacity: 0.4;
         }
       `}</style>
 
