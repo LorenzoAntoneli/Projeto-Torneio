@@ -45,7 +45,7 @@ export default function Admin() {
   // Persistent TV Channel para Broadcasts instantâneos
   const [tvChannel, setTvChannel] = useState(null);
   useEffect(() => {
-    const ch = supabase.channel('tv_rt_admin', { config: { broadcast: { self: true } } });
+    const ch = supabase.channel('tv_rt', { config: { broadcast: { self: true } } });
     ch.subscribe();
     setTvChannel(ch);
     return () => { supabase.removeChannel(ch); };
@@ -123,21 +123,8 @@ export default function Admin() {
       return alert(error.message);
     }
     
-    // Auto Avanço de Fase (Chaveamento)
-    if (match.next_match_id) {
-      const updateField = match.bracket_position === 1 ? { pair1_id: winnerId } : { pair2_id: winnerId };
-      const { error: nxErr } = await supabase.from('matches').update(updateField).eq('id', match.next_match_id);
-      if (nxErr) console.warn("Erro ao avançar chave:", nxErr.message);
-    }
-    
-    // Broadcast explícito INSTANTÂNEO para a TV
-    if (tvChannel) {
-      tvChannel.send({
-        type: 'broadcast',
-        event: 'match_finished',
-        payload: { matchId: match.id }
-      });
-    }
+    // Auto Avanço Removido
+
     
     alert('✅ Placar Oficializado!'); loadData();
   };
@@ -234,82 +221,6 @@ export default function Admin() {
     else { loadData(); setActiveTab('scoreboard'); }
   };
 
-  const generateBracket = async () => {
-    if (!selectedT || !selectedC) return alert('Selecione Torneio e Categoria.');
-    if (!window.confirm('Isso vai gerar dezenas de jogos automáticos para a chave. Tem certeza?')) return;
-    
-    const categoryPairs = pairs.filter(p => p.category_id === selectedC);
-    // Shuffle the array to randomize pairings
-    for (let i = categoryPairs.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [categoryPairs[i], categoryPairs[j]] = [categoryPairs[j], categoryPairs[i]];
-    }
-
-    const size = parseInt(bracketSize);
-    
-    let stageNames = {};
-    if (size === 16) stageNames = { 1: 'Final', 2: 'Semifinal', 4: 'Quartas de Final', 8: 'Oitavas de Final' };
-    if (size === 8) stageNames = { 1: 'Final', 2: 'Semifinal', 4: 'Quartas de Final' };
-    if (size === 4) stageNames = { 1: 'Final', 2: 'Semifinal' };
-
-    const createMatchQuery = (stage, nextMatchId, bracketPos, p1, p2) => {
-      return supabase.from('matches').insert([{
-        tournament_id: selectedT,
-        category_id: selectedC,
-        status: 'pending',
-        stage: stage,
-        next_match_id: nextMatchId || null,
-        bracket_position: bracketPos || null,
-        pair1_id: p1 || null,
-        pair2_id: p2 || null
-      }]).select().single();
-    };
-
-    try {
-      const fData = await createMatchQuery('Final', null, null, null, null);
-      if (fData.error) throw fData.error;
-      let previousStageIds = [fData.data.id];
-
-      let currentLevel = 2; 
-
-      while (currentLevel <= size / 2) {
-        let newStageIds = [];
-        const isBase = currentLevel === size / 2;
-        
-        for (let i = 0; i < previousStageIds.length; i++) {
-          const nextId = previousStageIds[i];
-          
-          let p1 = null; let p2 = null;
-          let p3 = null; let p4 = null;
-          
-          if (isBase) {
-             const d1 = categoryPairs.pop(); p1 = d1 ? d1.id : null;
-             const d2 = categoryPairs.pop(); p2 = d2 ? d2.id : null;
-             
-             const d3 = categoryPairs.pop(); p3 = d3 ? d3.id : null;
-             const d4 = categoryPairs.pop(); p4 = d4 ? d4.id : null;
-          }
-
-          const s1 = await createMatchQuery(stageNames[currentLevel], nextId, 1, p1, p2);
-          const s2 = await createMatchQuery(stageNames[currentLevel], nextId, 2, p3, p4);
-          
-          if (s1.error) throw s1.error;
-          if (s2.error) throw s2.error;
-          
-          newStageIds.push(s1.data.id);
-          newStageIds.push(s2.data.id);
-        }
-        previousStageIds = newStageIds;
-        currentLevel *= 2;
-      }
-      
-      alert('Chaveamento gerado com sucesso!');
-      loadData();
-    } catch(e) {
-      alert('Erro: ' + e.message);
-    }
-  };
-
   const deleteMatch = async (id) => {
     if (!window.confirm('⚠️ Tem certeza que deseja APAGAR esta partida?')) return;
     const { error } = await supabase.from('matches').delete().eq('id', id);
@@ -364,7 +275,6 @@ export default function Admin() {
           <div className={`nav-item ${activeTab === 'history' ? 'active' : ''}`} onClick={() => setActiveTab('history')}><LayoutList size={20} /> Partidas (Encerradas)</div>
           <div className={`nav-item ${activeTab === 'matches' ? 'active' : ''}`} onClick={() => setActiveTab('matches')}><Gamepad2 size={20} /> Agendar Jogo</div>
           <div className={`nav-item ${activeTab === 'pairs' ? 'active' : ''}`} onClick={() => setActiveTab('pairs')}><UserPlus size={20} /> Duplas</div>
-          <div className={`nav-item ${activeTab === 'brackets' ? 'active' : ''}`} onClick={() => setActiveTab('brackets')}><Network size={20} /> Chaves (Mata-Mata)</div>
           <div className={`nav-item ${activeTab === 'setup' ? 'active' : ''}`} onClick={() => setActiveTab('setup')}><Settings size={20} />Configurar</div>
           <div style={{ marginTop: 'auto' }}><a href="/tv" target="_blank" className="nav-item" style={{ textDecoration: 'none' }}><Monitor size={20} /> Ver TV</a><div className="nav-item" onClick={handleLogout} style={{ color: 'var(--accent-secondary)' }}><LogOut size={20} /> Sair</div></div>
         </nav>
@@ -376,7 +286,6 @@ export default function Admin() {
         <div className={`m-nav-item ${activeTab === 'history' ? 'active' : ''}`} onClick={() => setActiveTab('history')}><LayoutList size={20} /><small>Partidas</small></div>
         <div className={`m-nav-item ${activeTab === 'matches' ? 'active' : ''}`} onClick={() => setActiveTab('matches')}><Gamepad2 size={20} /><small>Agendar</small></div>
         <div className={`m-nav-item ${activeTab === 'pairs' ? 'active' : ''}`} onClick={() => setActiveTab('pairs')}><UserPlus size={20} /><small>Duplas</small></div>
-        <div className={`m-nav-item ${activeTab === 'brackets' ? 'active' : ''}`} onClick={() => setActiveTab('brackets')}><Network size={20} /><small>Chaves</small></div>
         <div className={`m-nav-item ${activeTab === 'setup' ? 'active' : ''}`} onClick={() => setActiveTab('setup')}><Settings size={20} /><small>Setup</small></div>
       </nav>
 
@@ -505,7 +414,6 @@ export default function Admin() {
                 <option value="1">Fixo: Próximas Partidas</option>
                 <option value="2">Fixo: Mural de Resultados</option>
                 <option value="3">Fixo: Patrocinadores</option>
-                <option value="4">Fixo: Chaveamento</option>
               </select>
 
               <label className="input-label">Tempo do Slide (segundos)</label>
@@ -585,37 +493,7 @@ export default function Admin() {
           </div>
         )}
 
-        {activeTab === 'brackets' && (
-          <div style={{ maxWidth: 600, margin: '0 auto' }}>
-            <h1 className="section-title">Gerador de Chaves</h1>
-            <div className="app-card">
-              <label className="input-label">Torneio e Categoria</label>
-              <div style={{ display: 'grid', gap: 10, marginBottom: 20 }}>
-                <select value={selectedT} onChange={e => setSelectedT(e.target.value)} style={{ marginBottom: 0 }}>
-                  <option value="">Torneio...</option>
-                  {tournaments.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-                </select>
-                <select value={selectedC} onChange={e => setSelectedC(e.target.value)} style={{ marginBottom: 0 }}>
-                  <option value="">Categoria...</option>
-                  {categories.filter(c => c.tournament_id === selectedT).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                </select>
-              </div>
-              
-              {selectedC && (
-                <>
-                  <label className="input-label">Tamanho da Chave</label>
-                  <select value={bracketSize} onChange={e => setBracketSize(e.target.value)} style={{ marginBottom: 20 }}>
-                    <option value="4">4 Duplas (Semis e Final)</option>
-                    <option value="8">8 Duplas (Quartas, Semis, Final)</option>
-                    <option value="16">16 Duplas (Oitavas até Final)</option>
-                  </select>
-                  <button onClick={generateBracket} className="btn-primary" style={{ width: '100%', height: 60, fontWeight: 900 }}>GERAR CHAVE AUTOMÁTICA</button>
-                  <p style={{ marginTop: 15, fontSize: '0.8rem', opacity: 0.5, textAlign: 'center' }}>Aviso: Isso sobrepõe partidas caso você já tenha chaves geradas para esta categoria. As duplas já cadastradas serão inseridas aleatoriamente na base da chave.</p>
-                </>
-              )}
-            </div>
-          </div>
-        )}
+
 
         {/* Modal de Edição */}
         {editingMatch && (
