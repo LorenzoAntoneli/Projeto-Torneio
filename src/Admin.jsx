@@ -627,7 +627,6 @@ export default function Admin() {
 
         {activeTab === 'brackets' && (
           <div style={{ maxWidth: 800, margin: '0 auto' }}>
-            <h1 className="section-title">Chaveamento (Fase de Grupos)</h1>
             <div className="app-card" style={{ marginBottom: 30 }}>
               <label className="input-label">1. Selecione o Evento</label>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 15, marginBottom: 20 }}>
@@ -642,127 +641,81 @@ export default function Admin() {
               </div>
 
               {selectedC && (
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
-                  <div className="app-card" style={{ background: 'rgba(255,255,255,0.01)', border: '1px dashed #333' }}>
-                    <label className="input-label">Opção A: Fase de Grupos</label>
-                    <div style={{ display: 'flex', gap: 15, alignItems: 'center', marginBottom: 20 }}>
-                      <select value={groupSize} onChange={e => setGroupSize(e.target.value)} style={{ width: 100, marginBottom: 0 }}>
-                        <option value="3">3 duplas</option>
-                        <option value="4">4 duplas</option>
-                        <option value="5">5 duplas</option>
-                      </select>
-                      <button className="btn-primary" style={{ flex: 1, height: 45, marginBottom: 0, background: 'rgba(255,255,255,0.1)' }} onClick={generateGroups}>SORTEAR GRUPOS</button>
+                <>
+                  <div style={{ background: 'rgba(255,255,255,0.03)', padding: 25, borderRadius: 20, border: '1px solid #333', marginBottom: 30 }}>
+                    <label className="input-label" style={{ fontSize: '1rem', color: 'var(--accent-primary)', marginBottom: 20 }}>2. Configuração da Fase de Grupos</label>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 15, marginBottom: 25 }}>
+                       <div>
+                          <label className="input-label" style={{ fontSize: '0.6rem' }}>Tamanho de cada Grupo (Duplas)</label>
+                          <select value={groupSize} onChange={e => setGroupSize(e.target.value)} style={{ marginBottom: 0 }}>
+                            <option value="2">2 duplas</option>
+                            <option value="3">3 duplas</option>
+                            <option value="4">4 duplas</option>
+                            <option value="5">5 duplas</option>
+                            <option value="6">6 duplas</option>
+                          </select>
+                       </div>
+                       <div>
+                          <label className="input-label" style={{ fontSize: '0.6rem' }}>Mata-Mata Direto (Duplas)</label>
+                          <input type="number" value={bracketSize} onChange={e => setBracketSize(e.target.value)} placeholder="Ex: 8" style={{ marginBottom: 0 }} />
+                       </div>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: 10 }}>
+                       <button className="btn-primary" style={{ flex: 1, height: 60, fontSize: '0.8rem', background: groupType === 'manual' ? 'var(--accent-primary)' : 'rgba(255,255,255,0.1)', color: groupType === 'manual' ? '#000' : '#fff' }} onClick={() => setGroupType('manual')}>MONTAR MANUAL</button>
+                       <button className="btn-primary" style={{ flex: 1, height: 60, fontSize: '0.8rem', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--accent-primary)', color: 'var(--accent-primary)' }} onClick={generateGroups}>SORTEAR TUDO (RANDOM)</button>
+                       <button className="btn-primary" style={{ flex: 1, height: 60, fontSize: '0.8rem', background: '#D4AF37', color: '#000' }} onClick={generateManualBracket}>GERAR MATA-MATA</button>
                     </div>
                   </div>
 
-                  <div className="app-card" style={{ background: 'rgba(255,255,255,0.01)', border: '1px dashed #D4AF37' }}>
-                    <label className="input-label">Opção B: Mata-Mata Direto</label>
-                    <div style={{ display: 'flex', gap: 15, alignItems: 'center' }}>
-                       <input type="number" value={bracketSize} onChange={e => setBracketSize(e.target.value)} placeholder="Ex: 8" style={{ width: 100, marginBottom: 0 }} />
-                       <button className="btn-primary" style={{ flex: 1, height: 45, marginBottom: 0 }} onClick={generateManualBracket}>GERAR CHAVE MATA-MATA</button>
+                  {groupType === 'manual' && (
+                    <div style={{ marginTop: 20 }}>
+                       <div style={{ background: 'rgba(0,0,0,0.2)', padding: 15, borderRadius: 12, marginBottom: 20, textAlign: 'center' }}>
+                          <p style={{ fontSize: '0.7rem', opacity: 0.6 }}>O sorteio distribuirá aleatoriamente as duplas cadastradas. Na montagem manual, você escolhe quem vai em cada slot abaixo.</p>
+                       </div>
+
+                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 20, marginBottom: 40 }}>
+                          {['A', 'B', 'C', 'D'].map(letter => {
+                             const categoryPairs = pairs.filter(p => p.category_id === selectedC);
+                             return (
+                               <div key={letter} className="app-card" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid #333' }}>
+                                  <h3 style={{ fontSize: '0.9rem', color: 'var(--accent-primary)', marginBottom: 15, textAlign: 'center' }}>GRUPO {letter}</h3>
+                                  {[1, 2, 3, 4, 5, 6].slice(0, groupSize).map(slotNum => {
+                                     const slotKey = `${letter}${slotNum}`;
+                                     return (
+                                       <div key={slotKey} style={{ marginBottom: 10 }}>
+                                          <select 
+                                            value={manualSlots[slotKey] || ''} 
+                                            onChange={e => setManualSlots({...manualSlots, [slotKey]: e.target.value})}
+                                            style={{ fontSize: '0.8rem', padding: '10px' }}
+                                          >
+                                             <option value="">-- Selecionar Dupla --</option>
+                                             {categoryPairs.map(p => {
+                                                const isTaken = Object.values(manualSlots).includes(p.id) && manualSlots[slotKey] !== p.id;
+                                                return <option key={p.id} value={p.id} disabled={isTaken}>{p.name} {isTaken ? '(Já escalada)' : ''}</option>
+                                             })}
+                                          </select>
+                                       </div>
+                                     );
+                                  })}
+                               </div>
+                             )
+                          })}
+                       </div>
+
+                       <button 
+                         className="btn-primary" 
+                         style={{ width: '100%', height: 65, marginBottom: 60, fontSize: '1.1rem', background: '#2ecc71', borderColor: '#2ecc71', color: '#000' }} 
+                         onClick={saveGroups}
+                         disabled={isGenerating}
+                       >
+                         {isGenerating ? 'SALVANDO...' : 'FECHAR GRUPOS E CRIAR JOGOS'}
+                       </button>
                     </div>
-                    <p style={{ fontSize: '0.6rem', opacity: 0.5, marginTop: 10 }}>* Use 4, 8, 16 ou 32 para chaves perfeitas.</p>
-                  </div>
-                </div>
+                  )}
+                </>
               )}
             </div>
-
-            {selectedC && (
-              <div style={{ marginTop: 20 }}>
-                 <div style={{ display: 'flex', gap: 10, marginBottom: 20 }}>
-                    <button className={`btn-primary ${groupType === 'manual' ? 'active' : ''}`} style={{ flex: 1, background: groupType === 'manual' ? 'var(--accent-primary)' : 'rgba(255,255,255,0.05)', color: groupType === 'manual' ? '#000' : '#fff' }} onClick={() => setGroupType('manual')}>MONTAR MANUAL</button>
-                    <button className="btn-primary" style={{ flex: 1, border: '1px solid var(--accent-primary)', background: 'transparent' }} onClick={generateGroups}>SORTEAR TUDO (RANDOM)</button>
-                 </div>
-
-                 {/* GRID DE SLOTS RESPONSIVO */}
-                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 20 }}>
-                    {['A', 'B', 'C', 'D'].map(letter => {
-                       const categoryPairs = pairs.filter(p => p.category_id === selectedC);
-                       return (
-                         <div key={letter} className="app-card" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid #333' }}>
-                            <h3 style={{ fontSize: '0.9rem', color: 'var(--accent-primary)', marginBottom: 15, textAlign: 'center' }}>GRUPO {letter}</h3>
-                            {[1, 2, 3, 4, 5].slice(0, groupSize).map(slotNum => {
-                               const slotKey = `${letter}${slotNum}`;
-                               return (
-                                 <div key={slotKey} style={{ marginBottom: 10 }}>
-                                    <select 
-                                      value={manualSlots[slotKey] || ''} 
-                                      onChange={e => setManualSlots({...manualSlots, [slotKey]: e.target.value})}
-                                      style={{ fontSize: '0.8rem', padding: '10px' }}
-                                    >
-                                       <option value="">-- Selecionar Dupla --</option>
-                                       {categoryPairs.map(p => {
-                                          // Desabilita se já estiver em outro slot
-                                          const isTaken = Object.values(manualSlots).includes(p.id) && manualSlots[slotKey] !== p.id;
-                                          return <option key={p.id} value={p.id} disabled={isTaken}>{p.name} {isTaken ? '(Já escalada)' : ''}</option>
-                                       })}
-                                    </select>
-                                 </div>
-                               );
-                            })}
-                         </div>
-                       )
-                    })}
-                 </div>
-
-                 <button className="btn-primary" style={{ width: '100%', height: 60, marginTop: 30, fontSize: '1rem', fontWeight: 900 }} onClick={saveGroups} disabled={isGenerating}>
-                    {isGenerating ? 'SALVANDO...' : 'OFICIALIZAR GRUPOS E CRIAR JOGOS'}
-                 </button>
-              </div>
-            )}
-
-
-            <div style={{ marginTop: 40, background: 'rgba(0,0,0,0.3)', padding: 30, borderRadius: 20, border: '1px solid #222' }}>
-               <h2 style={{ fontSize: '1rem', color: 'var(--accent-primary)', marginBottom: 30, textAlign: 'center', letterSpacing: 2 }}>VISUALIZAÇÃO DA CHAVE</h2>
-               <div style={{ display: 'flex', gap: 40, justifyContent: 'center', overflowX: 'auto', padding: 20 }}>
-                  {/* Visualização simplificada das rodadas no Admin */}
-                  {['Oitavas de Final', 'Quartas de Final', 'Semifinal', 'Final'].map(round => {
-                    const roundMatches = matches.filter(m => m.category_id === selectedC && m.stage === round);
-                    if (roundMatches.length === 0) return null;
-                    return (
-                      <div key={round} style={{ minWidth: 200 }}>
-                        <div style={{ fontSize: '0.6rem', opacity: 0.4, textAlign: 'center', marginBottom: 15, fontWeight: 900 }}>{round.toUpperCase()}</div>
-                        <div style={{ display: 'grid', gap: 20 }}>
-                           {roundMatches.sort((a,b) => a.id.localeCompare(b.id)).map(m => (
-                             <div key={m.id} style={{ background: '#111', padding: 10, borderRadius: 8, border: '1px solid #333', fontSize: '0.7rem' }}>
-                                <div style={{ borderBottom: '1px solid #222', paddingBottom: 5, marginBottom: 5, color: m.pair1_id ? '#fff' : '#444' }}>{m.pair1?.name || 'Aguardando...'}</div>
-                                <div style={{ color: m.pair2_id ? '#fff' : '#444' }}>{m.pair2?.name || 'Aguardando...'}</div>
-                             </div>
-                           ))}
-                        </div>
-                      </div>
-                    );
-                  })}
-               </div>
-            </div>
-
-            {previewGroups.length > 0 && (
-              <div className="fade-in">
-                <h2 style={{ fontSize: '1rem', color: 'var(--accent-primary)', marginBottom: 20, textAlign: 'center', letterSpacing: 2 }}>PRÉVIA DOS GRUPOS</h2>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: 20, marginBottom: 40 }}>
-                  {previewGroups.map((group, gIdx) => (
-                    <div key={gIdx} className="app-card" style={{ borderTop: '4px solid var(--accent-primary)', background: 'rgba(255,255,255,0.02)' }}>
-                      <h3 style={{ fontSize: '0.9rem', marginBottom: 15, textAlign: 'center', fontWeight: 900 }}>{group.name}</h3>
-                      <div style={{ display: 'grid', gap: 8 }}>
-                        {group.pairs.map((p, pIdx) => (
-                          <div key={pIdx} style={{ fontSize: '0.8rem', padding: '8px 12px', background: 'rgba(255,255,255,0.05)', borderRadius: 8 }}>
-                            {p.name}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                <button 
-                  className="btn-primary" 
-                  style={{ width: '100%', height: 65, marginBottom: 100, fontSize: '1.1rem', background: '#2ecc71', borderColor: '#2ecc71' }} 
-                  onClick={saveGroups}
-                  disabled={isGenerating}
-                >
-                  {isGenerating ? 'GERANDO PARTIDAS...' : 'CONFIRMAR E GERAR TODOS OS JOGOS'}
-                </button>
-              </div>
-            )}
           </div>
         )}
 
