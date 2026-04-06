@@ -16,7 +16,7 @@ export default function Admin() {
   const [courts, setCourts] = useState([]);
   const [sponsors, setSponsors] = useState([]);
 
-  // Form States
+  // Status do Formulário
   const [selectedT, setSelectedT] = useState('');
   const [selectedC, setSelectedC] = useState('');
   const [newTName, setNewTName] = useState('');
