@@ -160,6 +160,7 @@ export default function Admin() {
     if (error) {
       alert(error.message);
     } else {
+      // Broadcast the TV settings change
       supabase.channel('tv_rt').send({
         type: 'broadcast',
         event: 'tv_settings',
@@ -167,6 +168,23 @@ export default function Admin() {
       });
       alert('✅ Exibição da TV atualizada!');
     }
+  };
+
+  const forceCallMatch = (m) => {
+    if (!m.court_id) return alert('Por favor, edite a partida (Lápis) e informe a Quadra antes de chamar os jogadores na TV!');
+    const tvMatchData = {
+      ...m,
+      pair1_name: m.pair1?.name || '?',
+      pair2_name: m.pair2?.name || '?',
+      category_name: m.category?.name || 'Geral',
+      court_name: m.court?.name || 'Quadra'
+    };
+    supabase.channel('tv_rt').send({
+      type: 'broadcast',
+      event: 'call_match',
+      payload: { match: tvMatchData }
+    });
+    alert('📢 Aviso enviado instantaneamente para a TV!');
   };
 
   const deleteSponsor = async (id) => { 
@@ -279,17 +297,17 @@ export default function Admin() {
 
   const startEdit = (m) => {
     setEditingMatch(m);
-    setEditP1(m.pair1_id);
-    setEditP2(m.pair2_id);
+    setEditP1(m.pair1_id || '');
+    setEditP2(m.pair2_id || '');
     setEditCourt(m.court_id || '');
     setEditTime(m.scheduled_time || '');
   };
 
   const saveEdit = async () => {
-    if (!editingMatch || !editP1 || !editP2) return;
+    if (!editingMatch) return;
     const { error } = await supabase.from('matches').update({
-      pair1_id: editP1,
-      pair2_id: editP2,
+      pair1_id: editP1 || null,
+      pair2_id: editP2 || null,
       court_id: editCourt || null,
       scheduled_time: editTime || null,
       updated_at: new Date().toISOString()
@@ -355,6 +373,13 @@ export default function Admin() {
               <div key={m.id} className="app-card" style={{ borderLeftColor: 'var(--accent-primary)', paddingTop: 10 }}>
                 {/* Barra de Topo do Card (Ações) */}
                 <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '0 5px 10px 0', gap: 8 }}>
+                  <button
+                    onClick={() => forceCallMatch(m)}
+                    title="Chamar na TV Agora"
+                    style={{ background: 'rgba(212,175,55,0.1)', border: 'none', color: 'var(--accent-primary)', cursor: 'pointer', padding: '8px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                  >
+                    <Volume2 size={18} />
+                  </button>
                   <button
                     onClick={() => startEdit(m)}
                     style={{ background: 'rgba(255,255,255,0.05)', border: 'none', color: 'var(--accent-primary)', cursor: 'pointer', padding: '8px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}

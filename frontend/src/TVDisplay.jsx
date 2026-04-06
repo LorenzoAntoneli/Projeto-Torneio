@@ -114,9 +114,19 @@ export default function TVDisplay() {
       setCurrentTime(now);
     }, 10000);
 
+    let matchTimeout;
+    let pendingFinishId = null;
     const ch = supabase.channel('tv_rt').on('postgres_changes', { event: '*', schema: 'public', table: 'matches' }, (p) => {
-      if (p.eventType === 'UPDATE' && p.new.status === 'finished' && p.old?.status !== 'finished') loadMatches(p.new.id);
-      else loadMatches();
+      // Debounce para evitar race conditions de multiplos updates (ex: finalização + avanço de chave em ~50ms)
+      if (p.eventType === 'UPDATE' && p.new.status === 'finished' && p.old?.status !== 'finished') {
+        pendingFinishId = p.new.id;
+      }
+      
+      clearTimeout(matchTimeout);
+      matchTimeout = setTimeout(() => {
+        loadMatches(pendingFinishId);
+        pendingFinishId = null; // reseta apos enviar
+      }, 500);
     }).on('postgres_changes', { event: '*', schema: 'public', table: 'sponsors' }, () => {
       loadSponsors();
     }).on('postgres_changes', { event: '*', schema: 'public', table: 'settings' }, (p) => {
@@ -129,6 +139,11 @@ export default function TVDisplay() {
     }).on('broadcast', { event: 'tv_settings' }, (p) => {
       if (p.payload) {
         setTvSettings({ mode: p.payload.mode || 'auto', time: p.payload.time || 30 });
+      }
+    }).on('broadcast', { event: 'call_match' }, (p) => {
+      if (p.payload && p.payload.match) {
+        const m = p.payload.match;
+        setCallQueue(prev => [...prev, m]);
       }
     }).subscribe();
 
