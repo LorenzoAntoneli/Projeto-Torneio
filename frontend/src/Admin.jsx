@@ -358,8 +358,8 @@ export default function Admin() {
           <div style={{ maxWidth: 600, margin: '0 auto' }}>
             <h1 className="section-title">Configurar</h1>
 
-            <div className="app-card" style={{ borderLeftColor: '#2ecc71', marginBottom: 30 }}>
-              <h2 style={{ fontSize: '1.2rem', marginBottom: 15, color: '#2ecc71', fontWeight: 800 }}>Controle Automático ou Manual da TV</h2>
+            <div className="app-card" style={{ borderLeftColor: 'var(--accent-primary)', marginBottom: 30 }}>
+              <h2 style={{ fontSize: '1.2rem', marginBottom: 15, color: 'var(--accent-primary)', fontWeight: 800 }}>Controle Automático ou Manual da TV</h2>
               
               <label className="input-label">Modo de Exibição / Tela Fixa</label>
               <select value={tvMode} onChange={e => setTvMode(e.target.value)} style={{ marginBottom: 15 }}>
@@ -373,7 +373,7 @@ export default function Admin() {
               <label className="input-label">Tempo do Slide (segundos)</label>
               <input type="number" value={tvTime} onChange={e => setTvTime(e.target.value)} placeholder="Ex: 30" style={{ marginBottom: 20 }} />
 
-              <button className="btn-primary" style={{ width: '100%', height: 50, background: '#2ecc71', color: '#000', fontWeight: 900 }} onClick={saveTvSettings}>APLICAR NA TV AGORA</button>
+              <button className="btn-primary" style={{ width: '100%', height: 50, marginTop: 10, fontWeight: 900 }} onClick={saveTvSettings}>APLICAR NA TV AGORA</button>
             </div>
 
             <div className="app-card"><label className="input-label">Novo Torneio</label><input value={newTName} onChange={e => setNewTName(e.target.value)} placeholder="Ex: Open Verão" /><button onClick={createTournament} className="btn-primary" style={{ width: '100%', height: 55 }}>Salvar Evento</button></div>
