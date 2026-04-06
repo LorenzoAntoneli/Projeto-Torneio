@@ -115,17 +115,11 @@ export default function TVDisplay() {
     }, 10000);
 
     let matchTimeout;
-    let pendingFinishId = null;
-    const ch = supabase.channel('tv_rt').on('postgres_changes', { event: '*', schema: 'public', table: 'matches' }, (p) => {
-      // Debounce para evitar race conditions de multiplos updates (ex: finalização + avanço de chave em ~50ms)
-      if (p.eventType === 'UPDATE' && p.new.status === 'finished' && p.old?.status !== 'finished') {
-        pendingFinishId = p.new.id;
-      }
-      
+    const ch = supabase.channel('tv_rt').on('postgres_changes', { event: '*', schema: 'public', table: 'matches' }, () => {
+      // Sincronização 100% instantânea! Debounce leve apenas para evitar duplicidade rápida
       clearTimeout(matchTimeout);
       matchTimeout = setTimeout(() => {
-        loadMatches(pendingFinishId);
-        pendingFinishId = null; // reseta apos enviar
+        loadMatches();
       }, 500);
     }).on('postgres_changes', { event: '*', schema: 'public', table: 'sponsors' }, () => {
       loadSponsors();
@@ -144,6 +138,11 @@ export default function TVDisplay() {
       if (p.payload && p.payload.match) {
         const m = p.payload.match;
         setCallQueue(prev => [...prev, m]);
+      }
+    }).on('broadcast', { event: 'match_finished' }, (p) => {
+      // Acionador direto da Tela de Vitória (Anti-falhas)
+      if (p.payload && p.payload.matchId) {
+        loadMatches(p.payload.matchId);
       }
     }).subscribe();
 
@@ -218,7 +217,12 @@ export default function TVDisplay() {
 
   // 1. COLETOR: Monitora partidas para o horário atual e adiciona na fila
   useEffect(() => {
-    const toQueue = matches.filter(m => m.status === 'pending' && m.scheduled_time === currentTime && !calledIds.has(m.id));
+    const toQueue = matches.filter(m => {
+      if (m.status !== 'pending' || !m.scheduled_time || calledIds.has(m.id)) return false;
+      // Garante que "14:30:00" do banco seja lido como "14:30" pelo relogio!
+      return m.scheduled_time.substring(0, 5) === currentTime;
+    });
+    
     if (toQueue.length > 0) {
       setCallQueue(prev => [...prev, ...toQueue]);
       setCalledIds(prev => {
@@ -291,7 +295,7 @@ export default function TVDisplay() {
                         <div style={{ flex: 1 }}><div style={{ fontSize: '2rem', fontWeight: 900 }}>{m.pair1_name} <span style={{ opacity: 0.2, fontSize: '1rem', margin: '0 10px' }}>VS</span> {m.pair2_name}</div></div>
                         <div style={{ display: 'flex', gap: 30, alignItems: 'center' }}>
                           <div style={{ textAlign: 'center' }}><div style={{ fontSize: '0.7rem', opacity: 0.5, fontWeight: 900 }}>QUADRA</div><div style={{ fontSize: '1.4rem', fontWeight: 900, color: 'var(--accent-primary)' }}>{m.court_name}</div></div>
-                          <div style={{ textAlign: 'center', background: 'rgba(255,255,255,0.05)', padding: '10px 15px', borderRadius: 12 }}><div style={{ fontSize: '0.7rem', opacity: 0.5, fontWeight: 900 }}>INÍCIO</div><div style={{ fontSize: '1.4rem', fontWeight: 900 }}>{m.scheduled_time || '--:--'}</div></div>
+                          <div style={{ textAlign: 'center', background: 'rgba(255,255,255,0.05)', padding: '10px 15px', borderRadius: 12 }}><div style={{ fontSize: '0.7rem', opacity: 0.5, fontWeight: 900 }}>INÍCIO</div><div style={{ fontSize: '1.4rem', fontWeight: 900 }}>{m.scheduled_time ? m.scheduled_time.substring(0, 5) : '--:--'}</div></div>
                         </div>
                       </div>
                     ))}
@@ -328,7 +332,7 @@ export default function TVDisplay() {
                   <div style={{ fontSize: '1.8rem', fontWeight: 900, marginBottom: 20 }}>{m.pair1_name} <br /><span style={{ opacity: 0.2, fontSize: '1rem' }}>VS</span><br /> {m.pair2_name}</div>
                   <div style={{ display: 'flex', justifyContent: 'center', gap: 40, borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: 20 }}>
                     <div><div style={{ fontSize: '0.6rem', opacity: 0.5 }}>QUADRA</div><div style={{ fontSize: '1.8rem', fontWeight: 950, color: 'var(--accent-primary)' }}>{m.court_name}</div></div>
-                    <div><div style={{ fontSize: '0.6rem', opacity: 0.5 }}>HORÁRIO</div><div style={{ fontSize: '1.8rem', fontWeight: 950 }}>{m.scheduled_time || '--:--'}</div></div>
+                    <div><div style={{ fontSize: '0.6rem', opacity: 0.5 }}>HORÁRIO</div><div style={{ fontSize: '1.8rem', fontWeight: 950 }}>{m.scheduled_time ? m.scheduled_time.substring(0, 5) : '--:--'}</div></div>
                   </div>
                 </div>
               )) : <p style={{ gridColumn: '1/-1', textAlign: 'center', opacity: 0.2, fontSize: '2rem', marginTop: 100 }}>Nenhuma partida pendente no momento.</p>}

@@ -42,6 +42,15 @@ export default function Admin() {
   const [editCourt, setEditCourt] = useState('');
   const [editTime, setEditTime] = useState('');
 
+  // Persistent TV Channel para Broadcasts instantâneos
+  const [tvChannel, setTvChannel] = useState(null);
+  useEffect(() => {
+    const ch = supabase.channel('tv_rt_admin', { config: { broadcast: { self: true } } });
+    ch.subscribe();
+    setTvChannel(ch);
+    return () => { supabase.removeChannel(ch); };
+  }, []);
+
   const loadData = async () => {
     try {
       const { data: tData } = await supabase.from('tournaments').select('*').order('created_at', { ascending: false });
@@ -121,6 +130,15 @@ export default function Admin() {
       if (nxErr) console.warn("Erro ao avançar chave:", nxErr.message);
     }
     
+    // Broadcast explícito INSTANTÂNEO para a TV
+    if (tvChannel) {
+      tvChannel.send({
+        type: 'broadcast',
+        event: 'match_finished',
+        payload: { matchId: match.id }
+      });
+    }
+    
     alert('✅ Placar Oficializado!'); loadData();
   };
 
@@ -160,12 +178,13 @@ export default function Admin() {
     if (error) {
       alert(error.message);
     } else {
-      // Broadcast the TV settings change
-      supabase.channel('tv_rt').send({
-        type: 'broadcast',
-        event: 'tv_settings',
-        payload
-      });
+      if (tvChannel) {
+        tvChannel.send({
+          type: 'broadcast',
+          event: 'tv_settings',
+          payload
+        });
+      }
       alert('✅ Exibição da TV atualizada!');
     }
   };
@@ -179,11 +198,13 @@ export default function Admin() {
       category_name: m.category?.name || 'Geral',
       court_name: m.court?.name || 'Quadra'
     };
-    supabase.channel('tv_rt').send({
-      type: 'broadcast',
-      event: 'call_match',
-      payload: { match: tvMatchData }
-    });
+    if (tvChannel) {
+      tvChannel.send({
+        type: 'broadcast',
+        event: 'call_match',
+        payload: { match: tvMatchData }
+      });
+    }
     alert('📢 Aviso enviado instantaneamente para a TV!');
   };
 
