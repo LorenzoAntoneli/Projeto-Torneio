@@ -1,0 +1,5 @@
+C:\Users\lorenzo.antoneli\.gemini\antigravity\scratch\beach-tennis-app-supabase\frontend\public\favicon.svg
+C:\Users\lorenzo.antoneli\.gemini\antigravity\scratch\beach-tennis-app-supabase\frontend\public\icons.svg
+C:\Users\lorenzo.antoneli\.gemini\antigravity\scratch\beach-tennis-app-supabase\frontend\src\assets\hero.png
+C:\Users\lorenzo.antoneli\.gemini\antigravity\scratch\beach-tennis-app-supabase\frontend\src\assets\react.svg
+C:\Users\lorenzo.antoneli\.gemini\antigravity\scratch\beach-tennis-app-supabase\frontend\src\assets\vite.svg
