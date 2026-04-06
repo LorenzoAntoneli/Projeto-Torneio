@@ -12,6 +12,7 @@ export default function TVDisplay() {
   const [audioEnabled, setAudioEnabled] = useState(false);
   const [currentSlide, setCurrentSlide] = useState(0); // 0: Geral, 1: Próximas, 2: Resultados
   const [sponsors, setSponsors] = useState([]);
+  const [tvSettings, setTvSettings] = useState({ mode: 'auto', time: 30 });
   const [callQueue, setCallQueue] = useState([]);
   const [voiceKey, setVoiceKey] = useState(import.meta.env.VITE_VOICERSS_KEY || '');
 
@@ -62,6 +63,14 @@ export default function TVDisplay() {
     if (data) {
       const vKey = data.find(s => s.id === 'voicerss_key')?.value;
       if (vKey) setVoiceKey(vKey);
+
+      const tvSet = data.find(s => s.id === 'tv_settings');
+      if (tvSet && tvSet.value) {
+        try {
+          const parsed = JSON.parse(tvSet.value);
+          setTvSettings({ mode: parsed.mode || 'auto', time: parsed.time || 30 });
+        } catch(e) {}
+      }
     }
   };
 
@@ -79,15 +88,33 @@ export default function TVDisplay() {
       else loadMatches();
     }).on('postgres_changes', { event: '*', schema: 'public', table: 'sponsors' }, () => {
       loadSponsors();
+    }).on('postgres_changes', { event: '*', schema: 'public', table: 'settings' }, (p) => {
+      if (p.new?.id === 'tv_settings') {
+        try {
+          const parsed = JSON.parse(p.new.value);
+          setTvSettings({ mode: parsed.mode || 'auto', time: parsed.time || 30 });
+        } catch(e) {}
+      }
+    }).on('broadcast', { event: 'tv_settings' }, (p) => {
+      if (p.payload) {
+        setTvSettings({ mode: p.payload.mode || 'auto', time: p.payload.time || 30 });
+      }
     }).subscribe();
 
-    // Ciclo de Slides (1 minuto = 60000ms) - Agora com 4 telas (Geral, Próximas, Resultados, Patrocinadores)
-    const slideTimer = setInterval(() => {
-      setCurrentSlide(prev => (prev + 1) % 4);
-    }, 60000);
-
-    return () => { clearInterval(timer); clearInterval(slideTimer); supabase.removeChannel(ch); };
+    return () => { clearInterval(timer); supabase.removeChannel(ch); };
   }, []);
+
+  useEffect(() => {
+    let slideTimer;
+    if (tvSettings.mode === 'auto') {
+      slideTimer = setInterval(() => {
+        setCurrentSlide(prev => (prev + 1) % 4);
+      }, (tvSettings.time || 30) * 1000);
+    } else {
+      setCurrentSlide(Number(tvSettings.mode));
+    }
+    return () => { if (slideTimer) clearInterval(slideTimer); };
+  }, [tvSettings]);
 
   // Pré-carregar vozes do sistema (necessário em alguns navegadores)
   useEffect(() => {

@@ -31,6 +31,8 @@ export default function Admin() {
   const [matchTime, setMatchTime] = useState('');
   const [elevenKey, setElevenKey] = useState(import.meta.env.VITE_ELEVENLABS_KEY || '');
   const [voiceKey, setVoiceKey] = useState('');
+  const [tvMode, setTvMode] = useState('auto');
+  const [tvTime, setTvTime] = useState(30);
 
   // Edit States
   const [editingMatch, setEditingMatch] = useState(null);
@@ -67,10 +69,22 @@ export default function Admin() {
       setPairs(pData || []);
       setSponsors(spData || []);
 
-      const { data: sData, error: sError } = await supabase.from('settings').select('*').eq('id', 'elevenlabs_key').maybeSingle();
+      const { data: sData, error: sError } = await supabase.from('settings').select('*');
       if (sError) console.warn("Erro ao buscar configurações:", sError.message);
-      if (sData?.value) setElevenKey(sData.value);
-      if (sData?.id === 'voicerss_key') setVoiceKey(sData.value);
+      if (sData) {
+        const el = sData.find(s => s.id === 'elevenlabs_key');
+        if (el) setElevenKey(el.value);
+        const vr = sData.find(s => s.id === 'voicerss_key');
+        if (vr) setVoiceKey(vr.value);
+        const tv = sData.find(s => s.id === 'tv_settings');
+        if (tv) {
+          try {
+            const p = JSON.parse(tv.value);
+            setTvMode(p.mode || 'auto');
+            setTvTime(p.time || 30);
+          } catch(e) {}
+        }
+      }
     } catch (e) { console.error("Erro no carregamento:", e); }
   };
 
@@ -126,6 +140,21 @@ export default function Admin() {
     if (!voiceKey) return;
     const { error } = await supabase.from('settings').upsert({ id: 'voicerss_key', value: voiceKey });
     if (error) alert(error.message); else alert('✅ Chave salva no banco!');
+  };
+
+  const saveTvSettings = async () => {
+    const payload = { mode: tvMode, time: Number(tvTime) || 30 };
+    const { error } = await supabase.from('settings').upsert({ id: 'tv_settings', value: JSON.stringify(payload) });
+    if (error) {
+      alert(error.message);
+    } else {
+      supabase.channel('tv_rt').send({
+        type: 'broadcast',
+        event: 'tv_settings',
+        payload
+      });
+      alert('✅ Exibição da TV atualizada!');
+    }
   };
 
   const deleteSponsor = async (id) => { 
@@ -328,6 +357,25 @@ export default function Admin() {
         {activeTab === 'setup' && (
           <div style={{ maxWidth: 600, margin: '0 auto' }}>
             <h1 className="section-title">Configurar</h1>
+
+            <div className="app-card" style={{ borderLeftColor: '#2ecc71', marginBottom: 30 }}>
+              <h2 style={{ fontSize: '1.2rem', marginBottom: 15, color: '#2ecc71', fontWeight: 800 }}>Controle Automático ou Manual da TV</h2>
+              
+              <label className="input-label">Modo de Exibição / Tela Fixa</label>
+              <select value={tvMode} onChange={e => setTvMode(e.target.value)} style={{ marginBottom: 15 }}>
+                <option value="auto">Automático (Rotacionar todas)</option>
+                <option value="0">Fixo: Painel Geral</option>
+                <option value="1">Fixo: Próximas Partidas</option>
+                <option value="2">Fixo: Mural de Resultados</option>
+                <option value="3">Fixo: Patrocinadores</option>
+              </select>
+
+              <label className="input-label">Tempo do Slide (segundos)</label>
+              <input type="number" value={tvTime} onChange={e => setTvTime(e.target.value)} placeholder="Ex: 30" style={{ marginBottom: 20 }} />
+
+              <button className="btn-primary" style={{ width: '100%', height: 50, background: '#2ecc71', color: '#000', fontWeight: 900 }} onClick={saveTvSettings}>APLICAR NA TV AGORA</button>
+            </div>
+
             <div className="app-card"><label className="input-label">Novo Torneio</label><input value={newTName} onChange={e => setNewTName(e.target.value)} placeholder="Ex: Open Verão" /><button onClick={createTournament} className="btn-primary" style={{ width: '100%', height: 55 }}>Salvar Evento</button></div>
             {tournaments.length > 0 && (
               <>
