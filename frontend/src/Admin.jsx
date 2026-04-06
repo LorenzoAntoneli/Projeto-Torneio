@@ -123,6 +123,9 @@ export default function Admin() {
       return alert(error.message);
     }
     
+    if (tvChannel) {
+      tvChannel.send({ type: 'broadcast', event: 'match_finished', payload: { matchId: match.id } });
+    }
     
     alert('✅ Placar Oficializado!'); loadData();
   };
@@ -216,7 +219,11 @@ export default function Admin() {
       status: 'pending' 
     }]);
     if (error) alert("Erro ao criar partida: " + error.message);
-    else { loadData(); setActiveTab('scoreboard'); }
+    else { 
+      loadData(); 
+      setActiveTab('scoreboard'); 
+      if (tvChannel) tvChannel.send({ type: 'broadcast', event: 'sync_data' });
+    }
   };
 
   const deleteMatch = async (id) => {
@@ -247,6 +254,7 @@ export default function Admin() {
     else {
       setEditingMatch(null);
       loadData();
+      if (tvChannel) tvChannel.send({ type: 'broadcast', event: 'sync_data' });
     }
   };
 

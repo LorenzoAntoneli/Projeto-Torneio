@@ -86,6 +86,7 @@ export default function TVDisplay() {
     let matchTimeout;
     let pendingFinishId = null;
     const ch = supabase.channel('tv_rt').on('postgres_changes', { event: '*', schema: 'public', table: 'matches' }, (p) => {
+      // Debounce para evitar race conditions de multiplos updates
       if (p.eventType === 'UPDATE' && p.new.status === 'finished' && p.old?.status !== 'finished') {
         pendingFinishId = p.new.id;
       }
@@ -113,6 +114,11 @@ export default function TVDisplay() {
         const m = p.payload.match;
         setCallQueue(prev => [...prev, m]);
       }
+    }).on('broadcast', { event: 'match_finished' }, (p) => {
+      if (p.payload && p.payload.matchId) {
+        loadMatches(p.payload.matchId);
+      }
+      loadSponsors();
     }).subscribe();
 
     return () => { clearInterval(timer); supabase.removeChannel(ch); };
@@ -186,7 +192,7 @@ export default function TVDisplay() {
 
   // 1. COLETOR: Monitora partidas para o horário atual e adiciona na fila
   useEffect(() => {
-    const toQueue = matches.filter(m => m.status === 'pending' && m.scheduled_time && m.scheduled_time.startsWith(currentTime) && !calledIds.has(m.id));
+    const toQueue = matches.filter(m => m.status === 'pending' && m.scheduled_time === currentTime && !calledIds.has(m.id));
     if (toQueue.length > 0) {
       setCallQueue(prev => [...prev, ...toQueue]);
       setCalledIds(prev => {
