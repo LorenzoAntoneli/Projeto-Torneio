@@ -121,7 +121,7 @@ export default function TVDisplay() {
     let slideTimer;
     if (tvSettings.mode === 'auto') {
       slideTimer = setInterval(() => {
-        setCurrentSlide(prev => (prev + 1) % 4);
+        setCurrentSlide(prev => (prev + 1) % 5);
       }, (tvSettings.time || 30) * 1000);
     } else {
       setCurrentSlide(Number(tvSettings.mode));
@@ -352,6 +352,75 @@ export default function TVDisplay() {
           </div>
         )}
 
+        {/* SLIDE 4: CHAVEAMENTO VISUAL (Árvore Mata-Mata) */}
+        {currentSlide === 4 && (
+          <div className="fade-in" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+            <h2 style={{ color: 'var(--accent-primary)', fontSize: '2rem', textTransform: 'uppercase', letterSpacing: 6, marginBottom: 30, textAlign: 'center' }}>• Chaveamento Oficial •</h2>
+            
+            <div style={{ display: 'flex', gap: 20, justifyContent: 'center', flex: 1, paddingBottom: 40 }}>
+                {['Oitavas de Final', 'Quartas de Final', 'Semifinal', 'Final'].map((round, rIdx) => {
+                  const roundMatches = matches.filter(m => m.stage === round);
+                  if (roundMatches.length === 0) return null;
+                  
+                  return (
+                    <div key={round} style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-around', minWidth: 320, position: 'relative' }}>
+                       <div style={{ fontSize: '0.8rem', color: 'var(--accent-primary)', fontWeight: 900, textAlign: 'center', marginBottom: 20, letterSpacing: 4, background: 'rgba(0,0,0,0.5)', padding: '5px 0' }}>{round.toUpperCase()}</div>
+                       <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-around', flex: 1 }}>
+                        {roundMatches.sort((a,b) => a.id.localeCompare(b.id)).map((m, mIdx) => (
+                          <div key={m.id} style={{ position: 'relative', margin: '15px 0' }}>
+                            <div className="glass-panel" style={{ 
+                                padding: '20px 25px', 
+                                borderRadius: rIdx === 3 ? 30 : 20, 
+                                border: m.status === 'finished' ? '2px solid var(--accent-primary)' : '1px solid rgba(255,255,255,0.1)',
+                                background: m.status === 'finished' ? 'rgba(212,175,55,0.05)' : 'rgba(255,255,255,0.02)',
+                                boxShadow: m.status === 'finished' ? '0 10px 40px rgba(212,175,55,0.15)' : 'none',
+                                transition: 'all 0.5s ease',
+                                transform: rIdx === 3 ? 'scale(1.1)' : 'none'
+                              }}>
+                                {/* Nomes dos Jogadores */}
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                                  <span style={{ fontSize: '1rem', fontWeight: m.winner_id && m.winner_id === m.pair1_id ? 900 : 400, color: m.winner_id && m.winner_id === m.pair1_id ? 'var(--accent-primary)' : m.pair1_id ? '#fff' : '#555', transition: 'color 0.3s' }}>
+                                    {m.pair1_name || 'Aguardando...'}
+                                  </span>
+                                  {m.status === 'finished' && <span style={{ fontSize: '1rem', fontWeight: 900, color: 'var(--accent-primary)' }}>{m.pair1_games}</span>}
+                                </div>
+                                <div style={{ height: '1px', background: 'rgba(255,255,255,0.05)', margin: '10px 0' }}></div>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                  <span style={{ fontSize: '1rem', fontWeight: m.winner_id && m.winner_id === m.pair2_id ? 900 : 400, color: m.winner_id && m.winner_id === m.pair2_id ? 'var(--accent-primary)' : m.pair2_id ? '#fff' : '#555', transition: 'color 0.3s' }}>
+                                    {m.pair2_name || 'Aguardando...'}
+                                  </span>
+                                  {m.status === 'finished' && <span style={{ fontSize: '1rem', fontWeight: 900, color: 'var(--accent-primary)' }}>{m.pair2_games}</span>}
+                                </div>
+                            </div>
+
+                            {/* LINHAS CONECTORAS (TREE) */}
+                            {rIdx < 3 && (
+                              <>
+                                {/* Saída horizontal */}
+                                <div style={{ position: 'absolute', right: -20, top: '50%', width: 20, height: 2, background: m.status === 'finished' ? 'var(--accent-primary)' : 'rgba(255,255,255,0.1)' }}></div>
+                                {/* Barra vertical de conexão (apenas em pares de jogos) */}
+                                {mIdx % 2 === 0 && (
+                                  <div style={{ 
+                                    position: 'absolute', 
+                                    right: -20, 
+                                    top: '50%', 
+                                    width: 2, 
+                                    height: 'calc(100% + 32px)', // Conecta com o de baixo
+                                    background: 'rgba(255,255,255,0.1)',
+                                    zIndex: -1
+                                  }}></div>
+                                )}
+                              </>
+                            )}
+                          </div>
+                        ))}
+                       </div>
+                    </div>
+                  );
+               })}
+            </div>
+          </div>
+        )}
 
       </div>
 

@@ -131,6 +131,19 @@ export default function Admin() {
     if (tvChannel) {
       tvChannel.send({ type: 'broadcast', event: 'match_finished', payload: { matchId: match.id } });
     }
+
+    // Se possui próxima partida na árvore de mata-mata, sobe o vencedor
+    if (match.next_match_id) {
+       // Descobre se ele deve entrar no pair1_id ou pair2_id do próximo jogo
+       // Lógica simples: se o ID deste jogo for MENOR que o do seu par na chave, vai pro pair1. Caso contrário, pair2.
+       // Para fins práticos aqui, vamos tentar preencher o primeiro slot vazio da próxima partida.
+       const { data: nextMatch } = await supabase.from('matches').select('*').eq('id', match.next_match_id).single();
+       if (nextMatch) {
+         let updateField = 'pair1_id';
+         if (nextMatch.pair1_id && nextMatch.pair1_id !== winnerId) updateField = 'pair2_id';
+         await supabase.from('matches').update({ [updateField]: winnerId }).eq('id', match.next_match_id);
+       }
+    }
     
     alert('✅ Placar Oficializado!'); loadData();
   };
@@ -263,6 +276,53 @@ export default function Admin() {
       setEditingMatch(null);
       loadData();
       if (tvChannel) tvChannel.send({ type: 'broadcast', event: 'sync_data' });
+    }
+  };
+
+  const generateManualBracket = async () => {
+    if (!selectedC || !bracketSize) return alert('Selecione categoria e informe a quantidade de duplas!');
+    const size = parseInt(bracketSize);
+    if (![4, 8, 16, 32].includes(size)) return alert('Favor utilizar tamanhos padrão: 4, 8, 16 ou 32 para garantir a simetria da chave.');
+    
+    if (!window.confirm(`Isso gerará uma chave de ${size} duplas (mata-mata). Continuar?`)) return;
+    
+    setIsGenerating(true);
+    try {
+      // 1. Criar as rodadas de trás para frente (Final -> Semis -> Quartas...)
+      // Final
+      const { data: finalJoin, error: fError } = await supabase.from('matches').insert([{
+        tournament_id: selectedT, category_id: selectedC, status: 'pending', stage: 'Final'
+      }]).select().single();
+      if (fError) throw fError;
+
+      let currentRoundMatches = [finalJoin];
+      let matchesPerRound = 2; // Para a próxima rodada (Semis)
+
+      while (matchesPerRound <= (size / 2)) {
+          const newRoundMatches = [];
+          const stageName = matchesPerRound === 2 ? 'Semifinal' : matchesPerRound === 4 ? 'Quartas de Final' : matchesPerRound === 8 ? 'Oitavas de Final' : `Rodada de ${matchesPerRound*2}`;
+          
+          for (let m of currentRoundMatches) {
+             // Para cada jogo da rodada seguinte, criamos 2 jogos que apontam para ele
+             const { data: parents, error: pError } = await supabase.from('matches').insert([
+               { tournament_id: selectedT, category_id: selectedC, status: 'pending', stage: stageName, next_match_id: m.id },
+               { tournament_id: selectedT, category_id: selectedC, status: 'pending', stage: stageName, next_match_id: m.id }
+             ]).select();
+             if (pError) throw pError;
+             newRoundMatches.push(...parents);
+          }
+          currentRoundMatches = newRoundMatches;
+          matchesPerRound *= 2;
+      }
+      
+      alert('✅ Chave Mata-Mata gerada com sucesso!');
+      loadData();
+      setActiveTab('scoreboard');
+      if (tvChannel) tvChannel.send({ type: 'broadcast', event: 'sync_data' });
+    } catch (e) {
+      alert('Erro ao gerar chave: ' + e.message);
+    } finally {
+      setIsGenerating(false);
     }
   };
 
@@ -486,6 +546,7 @@ export default function Admin() {
                 <option value="1">Fixo: Próximas Partidas</option>
                 <option value="2">Fixo: Mural de Resultados</option>
                 <option value="3">Fixo: Patrocinadores</option>
+                <option value="4">Fixo: Chaveamento (Mata-Mata)</option>
               </select>
 
               <label className="input-label">Tempo do Slide (segundos)</label>
@@ -556,19 +617,53 @@ export default function Admin() {
               </div>
 
               {selectedC && (
-                <>
-                  <label className="input-label">2. Configuração dos Grupos</label>
-                  <div style={{ display: 'flex', gap: 15, alignItems: 'center', marginBottom: 20 }}>
-                    <span style={{ fontSize: '0.8rem', opacity: 0.7 }}>Duplas por Grupo:</span>
-                    <select value={groupSize} onChange={e => setGroupSize(e.target.value)} style={{ width: 100, marginBottom: 0 }}>
-                      <option value="3">3 duplas</option>
-                      <option value="4">4 duplas</option>
-                      <option value="5">5 duplas</option>
-                    </select>
-                    <button className="btn-primary" style={{ flex: 1, height: 45, marginBottom: 0 }} onClick={generateGroups}>SORTEAR GRUPOS</button>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+                  <div className="app-card" style={{ background: 'rgba(255,255,255,0.01)', border: '1px dashed #333' }}>
+                    <label className="input-label">Opção A: Fase de Grupos</label>
+                    <div style={{ display: 'flex', gap: 15, alignItems: 'center', marginBottom: 20 }}>
+                      <select value={groupSize} onChange={e => setGroupSize(e.target.value)} style={{ width: 100, marginBottom: 0 }}>
+                        <option value="3">3 duplas</option>
+                        <option value="4">4 duplas</option>
+                        <option value="5">5 duplas</option>
+                      </select>
+                      <button className="btn-primary" style={{ flex: 1, height: 45, marginBottom: 0, background: 'rgba(255,255,255,0.1)' }} onClick={generateGroups}>SORTEAR GRUPOS</button>
+                    </div>
                   </div>
-                </>
+
+                  <div className="app-card" style={{ background: 'rgba(255,255,255,0.01)', border: '1px dashed #D4AF37' }}>
+                    <label className="input-label">Opção B: Mata-Mata Direto</label>
+                    <div style={{ display: 'flex', gap: 15, alignItems: 'center' }}>
+                       <input type="number" value={bracketSize} onChange={e => setBracketSize(e.target.value)} placeholder="Ex: 8" style={{ width: 100, marginBottom: 0 }} />
+                       <button className="btn-primary" style={{ flex: 1, height: 45, marginBottom: 0 }} onClick={generateManualBracket}>GERAR CHAVE MATA-MATA</button>
+                    </div>
+                    <p style={{ fontSize: '0.6rem', opacity: 0.5, marginTop: 10 }}>* Use 4, 8, 16 ou 32 para chaves perfeitas.</p>
+                  </div>
+                </div>
               )}
+            </div>
+
+            <div style={{ marginTop: 40, background: 'rgba(0,0,0,0.3)', padding: 30, borderRadius: 20, border: '1px solid #222' }}>
+               <h2 style={{ fontSize: '1rem', color: 'var(--accent-primary)', marginBottom: 30, textAlign: 'center', letterSpacing: 2 }}>VISUALIZAÇÃO DA CHAVE</h2>
+               <div style={{ display: 'flex', gap: 40, justifyContent: 'center', overflowX: 'auto', padding: 20 }}>
+                  {/* Visualização simplificada das rodadas no Admin */}
+                  {['Oitavas de Final', 'Quartas de Final', 'Semifinal', 'Final'].map(round => {
+                    const roundMatches = matches.filter(m => m.category_id === selectedC && m.stage === round);
+                    if (roundMatches.length === 0) return null;
+                    return (
+                      <div key={round} style={{ minWidth: 200 }}>
+                        <div style={{ fontSize: '0.6rem', opacity: 0.4, textAlign: 'center', marginBottom: 15, fontWeight: 900 }}>{round.toUpperCase()}</div>
+                        <div style={{ display: 'grid', gap: 20 }}>
+                           {roundMatches.sort((a,b) => a.id.localeCompare(b.id)).map(m => (
+                             <div key={m.id} style={{ background: '#111', padding: 10, borderRadius: 8, border: '1px solid #333', fontSize: '0.7rem' }}>
+                                <div style={{ borderBottom: '1px solid #222', paddingBottom: 5, marginBottom: 5, color: m.pair1_id ? '#fff' : '#444' }}>{m.pair1?.name || 'Aguardando...'}</div>
+                                <div style={{ color: m.pair2_id ? '#fff' : '#444' }}>{m.pair2?.name || 'Aguardando...'}</div>
+                             </div>
+                           ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+               </div>
             </div>
 
             {previewGroups.length > 0 && (
