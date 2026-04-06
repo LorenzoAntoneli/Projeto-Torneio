@@ -42,16 +42,22 @@ export default function Admin() {
   const [editCourt, setEditCourt] = useState('');
   const [editTime, setEditTime] = useState('');
 
+  // Scoreboard Filters
+  const [scoreSearch, setScoreSearch] = useState('');
+  const [scoreCat, setScoreCat] = useState('');
+
   // Bracket/Groups States
   const [isGenerating, setIsGenerating] = useState(false);
   const [groupType, setGroupType] = useState('auto'); // 'auto' ou 'manual'
   const [manualSlots, setManualSlots] = useState({}); // { 'A1': pairId, 'A2': pairId... }
   
   // Configurações Dinâmicas (Vem do Torneio Selecionado)
-  const [tournamentSettings, setTournamentSettings] = useState({
-    max_pairs: 15,
-    num_groups: 4,
-    classify_per_group: 2
+  const [tournamentSettings, setTournamentSettings] = useState({ 
+    max_pairs: 15, 
+    num_groups: 4, 
+    classify_per_group: 2,
+    ranking_criteria: 'wins_balance_pro', 
+    bracket_type: 'cross_seed'
   });
 
   // Persistent TV Channel para Broadcasts instantâneos
@@ -112,7 +118,7 @@ export default function Admin() {
         if (currentT && currentT.settings) {
           setTournamentSettings(typeof currentT.settings === 'string' ? JSON.parse(currentT.settings) : currentT.settings);
         } else {
-          setTournamentSettings({ max_pairs: 15, num_groups: 4, classify_per_group: 2 });
+          setTournamentSettings({ max_pairs: 15, num_groups: 4, classify_per_group: 2, ranking_criteria: 'wins_balance_pro', bracket_type: 'cross_seed' });
         }
       }
     } catch (e) { console.error("Erro no carregamento:", e); }
@@ -377,7 +383,139 @@ export default function Admin() {
     setGroupType('manual');
   };
 
-   const saveGroups = async () => {
+   const calculateStandings = (catId) => {
+    const catMatches = matches.filter(m => m.category_id === catId && m.status === 'finished' && m.stage.startsWith('Grupo'));
+    const catPairs = pairs.filter(p => p.category_id === catId);
+    
+    const stats = {};
+    catPairs.forEach(p => {
+      stats[p.id] = { id: p.id, name: p.name, wins: 0, gp: 0, gc: 0, balance: 0, matches: 0 };
+    });
+
+    catMatches.forEach(m => {
+      if (!stats[m.pair1_id] || !stats[m.pair2_id]) return;
+      stats[m.pair1_id].matches++;
+      stats[m.pair2_id].matches++;
+      stats[m.pair1_id].gp += m.pair1_games;
+      stats[m.pair1_id].gc += m.pair2_games;
+      stats[m.pair2_id].gp += m.pair2_games;
+      stats[m.pair2_id].gc += m.pair1_games;
+      if (m.winner_id) stats[m.winner_id].wins++;
+    });
+
+    Object.values(stats).forEach(s => s.balance = s.gp - s.gc);
+
+    const sorted = Object.values(stats).sort((a, b) => {
+      if (b.wins !== a.wins) return b.wins - a.wins;
+      if (b.balance !== a.balance) return b.balance - a.balance;
+      return b.gp - a.gp;
+    });
+
+    // Agrupar por grupo para exibição
+    const groups = {};
+    catMatches.forEach(m => {
+      const gName = m.stage;
+      if (!groups[gName]) groups[gName] = [];
+    });
+    
+    // Como os matches já tem o stage, vamos inferir os grupos do manualSlots ou dos matches
+    const finalGroups = {};
+    // Pegar todos os grupos reais baseados nos nomes das fases
+    const distinctGroups = [...new Set(matches.filter(m => m.category_id === catId && m.stage.startsWith('Grupo')).map(m => m.stage))];
+    
+    distinctGroups.forEach(gName => {
+      // Filtrar duplas que jogaram nesse grupo
+      const pairIdsInGroup = [...new Set(matches.filter(m => m.stage === gName && m.category_id === catId).flatMap(m => [m.pair1_id, m.pair2_id]))];
+      finalGroups[gName] = sorted.filter(s => pairIdsInGroup.includes(s.id));
+    });
+
+    return finalGroups;
+  };
+
+  const generateAutoBracket = async () => {
+    if (!selectedC) return alert('Selecione uma categoria!');
+    const standings = calculateStandings(selectedC);
+    const groups = Object.keys(standings).sort();
+    
+    if (groups.length === 0) return alert('Não foram encontrados resultados de grupos para esta categoria!');
+    
+    const qualifiers = [];
+    const nQualify = tournamentSettings.classify_per_group || 2;
+
+    groups.forEach(gName => {
+      const topPairs = standings[gName].slice(0, nQualify);
+      qualifiers.push(...topPairs);
+    });
+
+    const size = qualifiers.length;
+    // Ajustar tamanho para o mata-mata mais próximo (4, 8, 16)
+    const bracketSize = size <= 4 ? 4 : size <= 8 ? 8 : 16;
+    
+    if (!window.confirm(`Gerar Mata-Mata automático para ${size} duplas classificadas?`)) return;
+    
+    setIsGenerating(true);
+    try {
+      // 1. Criar estrutura vazia (Final -> Semi -> ...)
+      // Vamos criar a estrutura de trás pra frente como no manual, mas populando a primeira rodada
+      
+      // Para simplificar e garantir ordem correta, vamos usar uma lógica de mapeamento de cruzamento
+      // 1A x 2B, 1B x 2A, etc...
+      const mapping = [];
+      if (groups.length === 4 && nQualify === 2) {
+        // Padrão Quartas 1A x 2B
+        mapping.push([standings[groups[0]][0], standings[groups[1]][1]]); // 1A x 2B
+        mapping.push([standings[groups[2]][0], standings[groups[3]][1]]); // 1C x 2D
+        mapping.push([standings[groups[1]][0], standings[groups[0]][1]]); // 1B x 2A
+        mapping.push([standings[groups[3]][0], standings[groups[2]][1]]); // 1D x 2C
+      } else {
+        // Genérico: 1 v 2 do grupo seguinte
+        for(let i=0; i<groups.length; i++) {
+           const next = (i + 1) % groups.length;
+           mapping.push([standings[groups[i]][0], standings[groups[next]][1]]);
+        }
+      }
+
+      // Criar a Final
+      const { data: finalMatch } = await supabase.from('matches').insert([{ tournament_id: selectedT, category_id: selectedC, stage: 'Final', status: 'pending' }]).select().single();
+      
+      // Criar Semis
+      const { data: semis } = await supabase.from('matches').insert([
+        { tournament_id: selectedT, category_id: selectedC, stage: 'Semifinal', status: 'pending', next_match_id: finalMatch.id },
+        { tournament_id: selectedT, category_id: selectedC, stage: 'Semifinal', status: 'pending', next_match_id: finalMatch.id }
+      ]).select();
+
+      // Criar Quartas e preencher com os mapeados
+      if (mapping.length > 2) {
+        const quartasData = [];
+        mapping.forEach((pairSet, idx) => {
+          quartasData.push({
+            tournament_id: selectedT,
+            category_id: selectedC,
+            stage: 'Quartas de Final',
+            status: 'pending',
+            next_match_id: idx < 2 ? semis[0].id : semis[1].id,
+            pair1_id: pairSet[0]?.id || null,
+            pair2_id: pairSet[1]?.id || null
+          });
+        });
+        await supabase.from('matches').insert(quartasData);
+      } else {
+        // Se for direto pra semi (apenas 2 grupos)
+        await supabase.from('matches').update({ pair1_id: mapping[0][0]?.id, pair2_id: mapping[0][1]?.id }).eq('id', semis[0].id);
+        await supabase.from('matches').update({ pair1_id: mapping[1][0]?.id, pair2_id: mapping[1][1]?.id }).eq('id', semis[1].id);
+      }
+
+      alert('✅ Mata-Mata Automático Gerado com os Classificados!');
+      loadData();
+      setActiveTab('scoreboard');
+    } catch (e) {
+      alert('Erro: ' + e.message);
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const saveGroups = async () => {
     const categoryPairs = pairs.filter(p => p.category_id === selectedC);
     const finalGroups = {};
     
@@ -488,8 +626,40 @@ export default function Admin() {
         {activeTab === 'scoreboard' && (
           <div>
             <h1 className="section-title">Em Quadra / Próximos</h1>
-             <p style={{ opacity: 0.5, fontSize: '0.8rem', textAlign: 'center', marginBottom: 20 }}>Edite (no Lápis) para definir quadra/horário. Jogos sem dupla fechada não aparecem aqui.</p>
-            {matches.filter(m => m.status !== 'finished' && m.pair1_id && m.pair2_id).map(m => (
+            
+            {/* Filtros de Busca */}
+            <div className="app-card" style={{ marginBottom: 20, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, padding: 15 }}>
+              <div>
+                <label className="input-label" style={{ fontSize: '0.65rem' }}>Filtrar por Categoria</label>
+                <select value={scoreCat} onChange={e => setScoreCat(e.target.value)} style={{ marginBottom: 0, fontSize: '0.8rem' }}>
+                  <option value="">Todas as Categorias</option>
+                  {categories.filter(c => c.tournament_id === selectedT).map(c => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="input-label" style={{ fontSize: '0.65rem' }}>Buscar Dupla</label>
+                <input 
+                  placeholder="Nome do atleta..." 
+                  value={scoreSearch} 
+                  onChange={e => setScoreSearch(e.target.value)} 
+                  style={{ marginBottom: 0, fontSize: '0.8rem' }}
+                />
+              </div>
+            </div>
+
+             <p style={{ opacity: 0.5, fontSize: '0.8rem', textAlign: 'center', marginBottom: 20 }}>Edite (no Lápis) para definir quadra/horário.</p>
+            
+            {matches
+              .filter(m => m.status !== 'finished' && m.pair1_id && m.pair2_id)
+              .filter(m => !scoreCat || m.category_id === scoreCat)
+              .filter(m => {
+                if (!scoreSearch) return true;
+                const search = scoreSearch.toLowerCase();
+                return m.pair1?.name?.toLowerCase().includes(search) || m.pair2?.name?.toLowerCase().includes(search);
+              })
+              .map(m => (
               <div key={m.id} className="app-card" style={{ borderLeftColor: 'var(--accent-primary)', paddingTop: 10 }}>
                 {/* Barra de Topo do Card (Ações) */}
                 <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '0 5px 10px 0', gap: 8 }}>
@@ -622,7 +792,24 @@ export default function Admin() {
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 15, marginBottom: 25 }}>
                           <div><label className="input-label" style={{ fontSize: '0.65rem' }}>Máx Duplas/Cat</label><input type="number" value={tournamentSettings.max_pairs} onChange={e => setTournamentSettings({...tournamentSettings, max_pairs: Number(e.target.value)})} style={{ marginBottom: 0 }} /></div>
                           <div><label className="input-label" style={{ fontSize: '0.65rem' }}>Nº de Grupos</label><input type="number" value={tournamentSettings.num_groups} onChange={e => setTournamentSettings({...tournamentSettings, num_groups: Number(e.target.value)})} style={{ marginBottom: 0 }} /></div>
-                          <div><label className="input-label" style={{ fontSize: '0.65rem' }}>Classificados</label><input type="number" value={tournamentSettings.classify_per_group} onChange={e => setTournamentSettings({...tournamentSettings, classify_per_group: Number(e.target.value)})} style={{ marginBottom: 0 }} /></div>
+                          <div>
+                             <label className="input-label" style={{ fontSize: '0.65rem' }}>Classificados</label>
+                             <input type="number" value={tournamentSettings.classify_per_group} onChange={e => setTournamentSettings({...tournamentSettings, classify_per_group: Number(e.target.value)})} style={{ marginBottom: 0 }} />
+                          </div>
+                          <div>
+                             <label className="input-label" style={{ fontSize: '0.65rem' }}>Critério de Desempate</label>
+                             <select value={tournamentSettings.ranking_criteria} onChange={e => setTournamentSettings({...tournamentSettings, ranking_criteria: e.target.value})} style={{ marginBottom: 0, fontSize: '0.8rem' }}>
+                               <option value="wins_balance_pro">1. Vitórias | 2. Saldo | 3. Pró</option>
+                               <option value="wins_direct_balance">1. Vitórias | 2. C. Direto | 3. Saldo</option>
+                             </select>
+                          </div>
+                          <div>
+                             <label className="input-label" style={{ fontSize: '0.65rem' }}>Formato Mata-Mata</label>
+                             <select value={tournamentSettings.bracket_type} onChange={e => setTournamentSettings({...tournamentSettings, bracket_type: e.target.value})} style={{ marginBottom: 0, fontSize: '0.8rem' }}>
+                               <option value="cross_seed">Cruzado (1ºA x 2ºB)</option>
+                               <option value="direct_seed">Direto (1ºA x 2ºA)</option>
+                             </select>
+                          </div>
                         </div>
                         <button className="btn-primary" style={{ width: '100%', height: 60, background: '#D4AF37', color: '#000', fontWeight: 900 }} onClick={saveTournamentSettings}>SALVAR REGRAS DO EVENTO</button>
                         <p style={{ fontSize: '0.6rem', opacity: 0.5, marginTop: 15, textAlign: 'center' }}>Essas regras serão aplicadas automaticamente em todas as categorias deste torneio.</p>
@@ -718,6 +905,38 @@ export default function Admin() {
 
               {selectedC && (
                 <>
+                  {/* TABELA DE CLASSIFICAÇÃO EM TEMPO REAL */}
+                  <div style={{ marginBottom: 40 }}>
+                    <h2 style={{ fontSize: '1rem', color: '#fff', marginBottom: 20, textAlign: 'center', borderBottom: '1px solid #333', paddingBottom: 10 }}>📊 Tabela de Classificação (Fase de Grupos)</h2>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 15 }}>
+                      {Object.entries(calculateStandings(selectedC)).map(([gName, teams]) => (
+                        <div key={gName} className="app-card" style={{ padding: 10, background: 'rgba(255,255,255,0.02)' }}>
+                          <div style={{ fontWeight: 900, color: 'var(--accent-primary)', fontSize: '0.8rem', marginBottom: 10, textAlign: 'center' }}>{gName}</div>
+                          <table style={{ width: '100%', fontSize: '0.7rem', borderCollapse: 'collapse' }}>
+                            <thead>
+                              <tr style={{ opacity: 0.5, textAlign: 'left' }}>
+                                <th style={{ padding: '5px' }}>Dupla</th>
+                                <th style={{ textAlign: 'center' }}>V</th>
+                                <th style={{ textAlign: 'center' }}>Saldo</th>
+                                <th style={{ textAlign: 'center' }}>GP</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {teams.map((t, idx) => (
+                                <tr key={t.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', background: idx < (tournamentSettings.classify_per_group || 2) ? 'rgba(39,174,96,0.05)' : 'transparent' }}>
+                                  <td style={{ padding: '8px 5px', fontWeight: idx < (tournamentSettings.classify_per_group || 2) ? 700 : 400 }}>{t.name}</td>
+                                  <td style={{ textAlign: 'center', fontWeight: 900 }}>{t.wins}</td>
+                                  <td style={{ textAlign: 'center' }}>{t.balance}</td>
+                                  <td style={{ textAlign: 'center' }}>{t.gp}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 20, marginBottom: 40 }}>
                     {Array.from({ length: tournamentSettings.num_groups }).map((_, gIdx) => {
                       const letter = String.fromCharCode(65 + gIdx);
@@ -753,19 +972,31 @@ export default function Admin() {
 
                 <button 
                   className="btn-primary" 
-                  style={{ width: '100%', height: 65, marginBottom: 50, fontSize: '1rem', background: '#27ae60', borderColor: '#27ae60', color: '#fff' }} 
+                  style={{ width: '100%', height: 65, marginBottom: 30, fontSize: '1rem', background: '#27ae60', borderColor: '#27ae60', color: '#fff' }} 
                   onClick={saveGroups}
                   disabled={isGenerating}
                 >
                   {isGenerating ? 'CRIANDO JOGOS...' : 'SALVAR GRUPOS E GERAR CONFRONTOS'}
                 </button>
 
-                <div style={{ padding: 25, borderRadius: 20, border: '1px dashed #D4AF37', background: 'rgba(212,175,55,0.05)', marginBottom: 50 }}>
-                  <label className="input-label" style={{ color: '#D4AF37' }}>2. Fase Eliminatória (Mata-Mata)</label>
-                  <p style={{ fontSize: '0.7rem', opacity: 0.7, marginBottom: 20 }}>Após a fase de grupos, use este campo para gerar a chave final (Ex: use 8 para Quartas de Final).</p>
-                  <div style={{ display: 'flex', gap: 15, alignItems: 'center' }}>
-                    <input type="number" value={bracketSize} onChange={e => setBracketSize(e.target.value)} placeholder="Ex: 8" style={{ width: 100, marginBottom: 0 }} />
-                    <button className="btn-primary" style={{ flex: 1, height: 60, background: '#D4AF37', color: '#000', marginBottom: 0 }} onClick={generateManualBracket}>GERAR CHAVE MATA-MATA</button>
+                <div style={{ padding: 25, borderRadius: 20, border: '2px solid #D4AF37', background: 'rgba(212,175,55,0.05)', marginBottom: 50 }}>
+                  <label className="input-label" style={{ color: '#D4AF37', fontWeight: 900 }}>⚡ GERAR MATA-MATA (INTELIGENTE)</label>
+                  <p style={{ fontSize: '0.7rem', opacity: 0.7, marginBottom: 20 }}>Esta opção pegará os classificados da tabela acima e montará as chaves automaticamente.</p>
+                  <button 
+                    className="btn-primary" 
+                    style={{ width: '100%', height: 60, background: '#D4AF37', color: '#000', fontWeight: 900 }} 
+                    onClick={generateAutoBracket}
+                    disabled={isGenerating}
+                  >
+                    CRIAR CHAVES COM OS VENCEDORES
+                  </button>
+                  
+                  <div style={{ marginTop: 25, borderTop: '1px solid rgba(212,175,55,0.2)', paddingTop: 20 }}>
+                    <label className="input-label" style={{ opacity: 0.5, fontSize: '0.6rem' }}>Opção Manual (Vazia)</label>
+                    <div style={{ display: 'flex', gap: 15, alignItems: 'center' }}>
+                      <input type="number" value={bracketSize} onChange={e => setBracketSize(e.target.value)} placeholder="Ex: 8" style={{ width: 100, marginBottom: 0 }} />
+                      <button className="btn-primary" style={{ flex: 1, height: 60, background: 'rgba(255,255,255,0.05)', color: '#fff', border: '1px solid #333' }} onClick={generateManualBracket}>GERAR CHAVE VAZIA</button>
+                    </div>
                   </div>
                 </div>
               </>
